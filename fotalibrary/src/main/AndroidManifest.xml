@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.innovationzed.fotalibrary">
+
+    <!--
+    Declare this required feature if you want to make the app available to BLE-capable
+    devices only.  If you want to make your app available to devices that don't support BLE,
+    you should omit this in the manifest.  Instead, determine BLE capability by using
+    PackageManager.hasSystemFeature(FEATURE_BLUETOOTH_LE)
+    -->
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="true" />
+
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!--
+    Apps that target Android 10 (API level 29) can still request the requestLegacyExternalStorage attribute.
+    After you update your app to target Android 11, the system ignores the requestLegacyExternalStorage flag.
+    -->
+    <application
+        android:allowBackup="true"
+        android:enabled="true"
+        android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
+        android:usesCleartextTraffic="false">
+
+        <service
+            android:name=".BLEConnectionServices.BluetoothLeService"
+            android:enabled="true" />
+        <service
+            android:name=".OTAFirmwareUpdate.OTAFirmwareUpgrade"
+            android:enabled="true" />
+
+        <!--receiver
+            android:name=".OTAFirmwareUpdate.OTAResponseReceiver_v0"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.fota.bluetooth.le.ACTION_OTA_DATA_AVAILABLE" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".OTAFirmwareUpdate.OTAResponseReceiver_v1"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.fota.bluetooth.le.ACTION_OTA_DATA_AVAILABLE_V1" />
+            </intent-filter>
+        </receiver-->
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.innovationzed.fotalibrary.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths" />
+        </provider>
+    </application>
+
+</manifest>

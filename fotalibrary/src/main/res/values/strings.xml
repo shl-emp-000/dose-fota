@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="authority_fileprovider" translatable="false">com.innovationzed.cysmart.fileprovider</string>
+
+    <!-- Application elements -->
+    <string name="app_name">FOTA</string>
+
+    <!-- bluetooth button elements -->
+    <string name="bluetooth_pair">Paired</string>
+    <string name="bluetooth_unpair">Not Paired</string>
+
+    <!-- Alert dialog elements -->
+    <string name="alert_message_exit">Do you want to exit the application?</string>
+    <string name="alert_message_exit_ok">OK</string>
+    <string name="alert_message_exit_cancel">Cancel</string>
+    <string name="alert_message_connect">Connecting to the device</string>
+    <string name="alert_message_connect_title">Device Connection</string>
+    <string name="alert_message_bluetooth_connect">The BLE device is connected</string>
+    <string name="alert_message_bluetooth_disconnect">The BLE device is disconnected</string>
+    <string name="alert_message_bluetooth_reconnect">Please Turn Bluetooth ON</string>
+    <string name="alert_message_wait">Please wait...</string>
+    <string name="alert_message_yes">Yes</string>
+    <string name="alert_message_no">No</string>
+    <string name="alert_message_bonding_title">Bonding</string>
+    <string name="alert_message_bonding_message">Bonding is in process \nPlease wait...</string>
+    <string name="alert_message_ota_cancel">Do you want to cancel the OTA update?</string>
+    <string name="alert_message_ota_pending">You have firmware upgrade in progress. Going back will stop the firmware upgrade and disconnect from the device. Do you want to continue?</string>
+    <string name="alert_programming_of_active_app_is_not_allowed">Programming of active application is not allowed</string>
+    <string name="alert_invalid_active_app_programmed">Illegal active application selected!\nPlease change selection and try again.</string>
+    <string name="alert_message_ota_error">Firmware update canceled\nError: </string>
+    <string name="alert_message_silicon_id_mismatch_error">Error: The SiliconID or SiliconRev does not match</string>
+    <string name="alert_message_no_silicon_id_error">Error: Target returned no SiliconID</string>
+    <string name="alert_message_checksum_error">Error: The checksum do not match</string>
+    <string name="alert_message_verify_application_error">Error: Verification failed for the programmed application</string>
+    <string name="alert_message_row_out_of_bounds_error">Error: The row number exceeds the bounds</string>
+    <string name="alert_message_permission_required_title">Permission required</string>
+    <string name="alert_message_location_permission_required_message">Starting from Android 6.0 Marshmallow the system requires location permission in order to scan Bluetooth LE devices. \n\nBluetooth beacons, like iBeacons or Eddystone beacons, may be used to determine the phone\'s and user\'s location. This application is not using this information in any way.</string>
+    <string name="alert_message_storage_permission_required_message">Starting from Android 6.0 Marshmallow the system requires storage permission to read/write files on the storage.</string>
+
+    <!-- Device discovery elements -->
+    <string name="device_unknown">Unknown device</string>
+    <string name="device_ble_not_supported">Bluetooth Low Energy not supported on device</string>
+    <string name="device_bluetooth_on">Bluetooth turned on successfully</string>
+    <string name="device_bluetooth_not_supported">Bluetooth not supported on device</string>
+    <string name="device_signal_strength">RSSI:</string>
+    <string name="device_signal_strength_unit">dBm</string>
+
+    <!-- profile control elements -->
+    <string name="profile_cannot_connect_message">Cannot connect to the device</string>
+
+
+    <!-- ActionBar fragment Names -->
+    <string name="profile_control_fragment">Services</string>
+    <string name="profile_scan_fragment">IZ FOTA</string>
+
+    <!-- OTA profile elements -->
+    <string name="ota_upgrade">UPGRADE</string>
+    <string name="ota_file_read">Reading file, Please wait..</string>
+    <string name="ota_file_read_complete">File Read Completed</string>
+    <string name="ota_enter_bootloader">Executing Enter Bootloader Command…</string>
+    <string name="ota_get_app_status">Executing Get Application Status Command…</string>
+    <string name="ota_get_flash_size">Executing Get Flash Size Command…</string>
+    <string name="ota_program_row">Firmware Upgrade in progress…</string>
+    <string name="ota_verify_row">Firmware Upgrade in progress…</string>
+    <string name="ota_verify_checksum">Executing Verify Checksum Command…</string>
+    <string name="ota_set_active_application">Executing Set Active Application Command…</string>
+    <string name="ota_set_eiv">Executing Set EIV Command…</string>
+    <string name="ota_end_bootloader">Executing Exit Bootloader Command…</string>
+    <string name="ota_end_success">Firmware upgrade completed successfully.</string>
+    <string name="ota_set_application_metadata">Executing Set Application Metadata Command…</string>
+    <string name="ota_verify_application">Executing Verify Application Command…</string>
+    <string name="ota_title">OTA Firmware Upgrade</string>
+    <string name="ota_alert_invalid_file">Invalid or corrupted file</string>
+
+    <!-- General Toast  -->
+    <string name="toast_selection_cancelled">Selection cancelled</string>
+    <string name="toast_unpaired">Device unpaired successfully</string>
+    <string name="toast_paired">Device paired successfully</string>
+
+    <!-- Descriptor parser  -->
+    <string name="descriptor_notification_enabled">Notifications enabled</string>
+    <string name="descriptor_notification_disabled">Notifications disabled</string>
+    <string name="descriptor_indication_enabled">Indications enabled</string>
+    <string name="descriptor_indication_disabled">Indications disabled</string>
+    <string name="descriptor_reliablewrite_enabled">Reliable Write enabled</string>
+    <string name="descriptor_reliablewrite_disabled">Reliable Write disabled</string>
+    <string name="descriptor_writableauxillary_enabled">Writable Auxiliaries enabled</string>
+    <string name="descriptor_writableauxillary_disabled">Writable Auxiliaries disabled</string>
+    <string name="descriptor_broadcast_enabled">Broadcast enabled</string>
+    <string name="descriptor_broadcast_disabled">Broadcast disabled</string>
+
+    <string name="descriptor_bluetoothSIGAssignedNo">Bluetooth SIG Assigned Numbers</string>
+    <string name="descriptor_reservedforFutureUse">Reserved for future use</string>
+
+    <string name="descriptor_format">Format</string>
+    <string name="exponent">Exponent</string>
+    <string name="unit">Unit</string>
+    <string name="namespace">Namespace</string>
+    <string name="description">Description</string>
+
+    <string name="exchange_mtu">"Exchange GATT MTU"</string>
+    <string name="exchange_mtu_request">"[%1$s | %2$s] %3$s request, MTU: %4$d, Status: %5$d"</string>
+    <string name="exchange_mtu_rsp">"[%1$s | %2$s] %3$s request completed, MTU: %4$d, Status: %5$d"</string>
+    <string name="location_disabled">Location disabled</string>
+    <string name="enable">Enable</string>
+    <string name="more">More</string>
+    <string name="tab_scanner">Scanner</string>
+    <string name="tab_paired">Paired</string>
+
+    <!-- Dual-App Bootloader SetActiveApplication options -->
+    <!-- Keep these 2 arrays in sync -->
+</resources>

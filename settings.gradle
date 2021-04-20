@@ -1,0 +1,3 @@
+include ':fotalibrary'
+include ':app'
+rootProject.name = "FOTA Application"
