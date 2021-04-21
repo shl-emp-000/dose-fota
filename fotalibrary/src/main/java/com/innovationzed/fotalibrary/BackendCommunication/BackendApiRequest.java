@@ -3,10 +3,12 @@ package com.innovationzed.fotalibrary.BackendCommunication;
 import android.content.Context;
 
 import com.innovationzed.fotalibrary.CommonUtils.JWThandler;
+import com.innovationzed.fotalibrary.CommonUtils.Utils;
 import com.innovationzed.fotalibrary.FotaApi;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Dictionary;
 import java.util.List;
 
 import okhttp3.ResponseBody;
@@ -45,55 +47,17 @@ public class BackendApiRequest {
 
         Call<List<Firmware>> call = mIzFotaApi.getLatestFirmwareVersion(JWThandler.getAuthToken(mContext));
         call.enqueue(callback);
-//        call.enqueue(new Callback<List<Firmware>>() {
-//            @Override
-//            public void onResponse(Call<List<Firmware>> call, Response<List<Firmware>> response) {
-//
-//                if (!response.isSuccessful()) {
-//                    return;
-//                }
-//                List<Firmware> versions = response.body();
-//                mLatestFirmwareVersion = versions.get(0).getFirmwareVersion();
-//            }
-//
-//            @Override
-//            public void onFailure(Call<List<Firmware>> call, Throwable t) {
-//            }
-//        });
     }
 
     public void downloadLatestFirmwareFile(Callback<ResponseBody> callback){
         Call<ResponseBody> call = mIzFotaApi.downloadLatestFirmware(JWThandler.getAuthToken(mContext));
-        call.enqueue(callback);//new Callback<ResponseBody>() {
-//            @Override
-//            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-//
-//                if (!response.isSuccessful()) {
-//                    return;
-//                }
-//                String contentDisposition = response.raw().header("Content-Disposition");
-//                String strFilename = "filename=";
-//                int startIndex = contentDisposition.indexOf(strFilename);
-//                String filename = contentDisposition.substring(startIndex + strFilename.length());
-//                mNewFirmwarePath =  ROOT_DIR + File.separator + filename;
-//                boolean writtenToDisk = writeResponseBodyToDisk(response.body(), mNewFirmwarePath);
-//
-//                if (writtenToDisk) {
-//
-//                } else {
-//                }
-//
-//            }
-//
-//            @Override
-//            public void onFailure(Call<ResponseBody> call, Throwable t) {
-//            }
-//        });
+        call.enqueue(callback);
     }
 
     public void postFotaResult(boolean success, String reason) {
         String date = mSdf.format(new Date(System.currentTimeMillis()));
-        HistoryRequest history = new HistoryRequest(FotaApi.getDeviceSN(), date, success, FotaApi.latestFirmwareVersion, FotaApi.getDeviceFirmwareVersion(), reason);
+        Dictionary deviceInfo = Utils.getDeviceInformation();
+        HistoryRequest history = new HistoryRequest((String) deviceInfo.get("deviceSN"), date, success, FotaApi.latestFirmwareVersion, (String) deviceInfo.get("firmwareVersion"), reason);
         mRetryCounter = 0;
 
         // Call API
@@ -121,37 +85,6 @@ public class BackendApiRequest {
                     call = mPostCall.clone();
                     call.enqueue(mCallback);
                 }
-            }
-        });
-    }
-
-    private void postHardCodedData(){
-
-        // Set parameters
-        String device = "1122";
-        boolean fwUpdateSuccess = true;
-        String newFirmware = "2.0.0";
-        String deviceFirmware = "1.0.0";
-        String reason = "Test from new android app with authentication";
-        String date = mSdf.format(new Date(System.currentTimeMillis()));
-
-        HistoryRequest history = new HistoryRequest(device, date, fwUpdateSuccess, newFirmware, deviceFirmware, reason);
-
-        // Call API
-        Call<Void> call = mIzFotaApi.postData(JWThandler.getAuthToken(mContext), history);
-
-        call.enqueue(new Callback<Void>() {
-            @Override
-            public void onResponse(Call<Void> call, Response<Void> response) {
-
-                if (!response.isSuccessful()) {
-                    return;
-                }
-
-            }
-
-            @Override
-            public void onFailure(Call<Void> call, Throwable t) {
             }
         });
     }

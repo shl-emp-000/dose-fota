@@ -61,7 +61,6 @@ import com.innovationzed.fotalibrary.CommonUtils.Constants;
 import com.innovationzed.fotalibrary.CommonUtils.GattAttributes;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
-import com.innovationzed.fotalibrary.OTAFirmwareUpdate.OTAResponseReceiver_v1;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -102,6 +101,10 @@ public class BluetoothLeService extends Service {
             "com.fota.bluetooth.le.ACTION_OTA_SUCCESS";
     public final static String ACTION_OTA_FAIL =
             "com.fota.bluetooth.le.ACTION_OTA_FAIL";
+    public final static String ACTION_OTA_IS_POSSIBLE =
+            "com.fota.bluetooth.le.ACTION_OTA_IS_POSSIBLE";
+    public final static String ACTION_OTA_IS_NOT_POSSIBLE =
+            "com.fota.bluetooth.le.ACTION_OTA_IS_NOT_POSSIBLE";
     public final static String ACTION_GATT_CHARACTERISTIC_ERROR =
             "com.example.bluetooth.le.ACTION_GATT_CHARACTERISTIC_ERROR";
     public final static String ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL =
@@ -455,14 +458,6 @@ public class BluetoothLeService extends Service {
     }
 
     public static void unregisterBroadcastReceiver(Context context, BroadcastReceiver receiver) {
-        // Unregistering receiver as a LOCAL receiver
-        LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver);
-
-        // Unregistering receiver as a GLOBAL receiver
-        context.unregisterReceiver(receiver);
-    }
-
-    public static void unregisterOTAResponseReceiver(Context context, OTAResponseReceiver_v1 receiver) {
         // Unregistering receiver as a LOCAL receiver
         LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver);
 

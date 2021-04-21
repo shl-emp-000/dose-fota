@@ -34,6 +34,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private boolean mFirmwareUpdatePossible;
     private boolean mUserWantsToUpdate;
 
+    // Receiver for the 4 possible actions that can be broadcasted from the FotaApi
     private BroadcastReceiver mOTAStatusReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -43,6 +44,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     setTextInformation("Firmware update is finished.");
                 } else if (action.equals(BluetoothLeService.ACTION_OTA_FAIL)){
                     setTextInformation("Firmware update failed.");
+                } else if (action.equals(BluetoothLeService.ACTION_OTA_IS_POSSIBLE)){
+                    mFirmwareUpdatePossible = true;
+                    setTextInformation("Firmware update is possible.");
+                } else if (action.equals(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE)){
+                    setTextInformation("Firmare update is not possible.");
                 }
             }
         }
@@ -53,6 +59,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.fota_fragment);
 
+        // The checks below can be done in any way the 3rd party app prefers,
+        // but the following permissions need to be granted:
+        // - Manifest.permission.ACCESS_FINE_LOCATION
+        // - Manifest.permission.READ_EXTERNAL_STORAGE
+        // - Manifest.permission.WRITE_EXTERNAL_STORAGE
         checkLocationPermission();
         checkStoragePermission();
 
@@ -60,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         startService(gattServiceIntent);
 
         // Register receiver
-        BluetoothLeService.registerBroadcastReceiver(this, mOTAStatusReceiver, Utils.makeOTAFinishedIntentFilter());
+        BluetoothLeService.registerBroadcastReceiver(this, mOTAStatusReceiver, Utils.makeOTAIntentFilter());
 
         // Anders MAC 00:A0:50:BA:CC:CE
         mFotaApi = new FotaApi(this, "00:A0:50:B4:42:33"); // MAC address is hardcoded at this point
@@ -85,8 +96,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.buttonPossible:
-                mFirmwareUpdatePossible = mFotaApi.isFirmwareUpdatePossible();
-                setTextInformation("Firmware update is " + (mFirmwareUpdatePossible ? "" : "not ") + "possible.");
+                mFotaApi.isFirmwareUpdatePossible();
+                setTextInformation("Checking if firmware update is possible...");
                 break;
             case R.id.buttonUserConfirmation:
                 //TODO: replace the line below with actual code for asking the user if they want to update
@@ -138,7 +149,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         return true;
     }
-
 
     private boolean checkStoragePermission() {
         // Since Marshmallow Read/Write access to Storage need to be requested

@@ -34,8 +34,7 @@
 package com.innovationzed.fotalibrary.CommonUtils;
 
 /**
- * This class includes a subset of standard GATT attributes and carousel image
- * mapping
+ * This class includes a subset of standard GATT attributes
  */
 public class GattAttributes {
 

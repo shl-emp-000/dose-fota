@@ -34,7 +34,6 @@
 package com.innovationzed.fotalibrary.CommonUtils;
 
 import android.R.integer;
-import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
@@ -48,14 +47,11 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
-import android.os.Handler;
 
 import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
 
-import java.text.DateFormat;
-import java.text.NumberFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.util.Dictionary;
+import java.util.Hashtable;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -71,12 +67,20 @@ public class Utils {
     private static final String BASE_UUID_FORMAT = "(((0000)|(\\d{4}))(\\d{4}))-0000-1000-8000-00805F9B34FB";
     private static final Pattern BASE_UUID_PATTERN = Pattern.compile(BASE_UUID_FORMAT, Pattern.CASE_INSENSITIVE);
     public static final Locale DATA_LOCALE = Locale.ROOT;
-    private static final int BONDING_PROGRESS_DIALOG_TIMEOUT_MILLIS = 20000;
     public static final String DATA_LOGGER_FILENAME_PATTERN = "dd-MMM-yyyy";
 
-    private static ProgressDialog mBondingProgressDialog;
-    private static Handler mBondingProgressDialogTimer;
-    private static Runnable mBondingProgressDialogTimerTask;
+    /**
+     * Gets hardcoded device data
+     *
+     * @return Dictionary containing deviceSN (String), firmwareVersion (String), batteryLevel (int)
+     */
+    public static Dictionary getDeviceInformation(){
+        Dictionary deviceInfo = new Hashtable();
+        deviceInfo.put("deviceSN", "12345");
+        deviceInfo.put("firmwareVersion", "0.3.0");
+        deviceInfo.put("batteryLevel", 75);
+        return deviceInfo;
+    }
 
     /**
      * Checks if input UUID string is of base UUID format and if that is true returns the unique 16 or 32 bits of it
@@ -217,10 +221,12 @@ public class Utils {
         return filter;
     }
 
-    public static IntentFilter makeOTAFinishedIntentFilter(){
+    public static IntentFilter makeOTAIntentFilter(){
         final IntentFilter filter = new IntentFilter();
         filter.addAction(BluetoothLeService.ACTION_OTA_SUCCESS);
         filter.addAction(BluetoothLeService.ACTION_OTA_FAIL);
+        filter.addAction(BluetoothLeService.ACTION_OTA_IS_POSSIBLE);
+        filter.addAction(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
         return filter;
     }
 
@@ -363,71 +369,6 @@ public class Utils {
     }
 
     /**
-     * Get the data from milliseconds
-     *
-     * @return {@link String}
-     */
-    public static String GetDateFromMilliseconds() {
-        DateFormat formatter = new SimpleDateFormat("dd MMM yyyy");
-        Calendar calendar = Calendar.getInstance();
-        return formatter.format(calendar.getTime());
-    }
-
-    /**
-     * Get the date
-     *
-     * @return {@link String}
-     */
-    public static String GetDate() {
-        SimpleDateFormat formatter = new SimpleDateFormat(DATA_LOGGER_FILENAME_PATTERN);
-        Calendar calendar = Calendar.getInstance();
-        return formatter.format(calendar.getTime());
-    }
-
-    /**
-     * Get the time in seconds
-     *
-     * @return {@link String}
-     */
-    public static int getTimeInSeconds() {
-        int seconds = (int) System.currentTimeMillis();
-        return seconds;
-    }
-
-    /**
-     * Get the time from milliseconds
-     *
-     * @return {@link String}
-     */
-    public static String GetTimeFromMilliseconds() {
-        DateFormat formatter = new SimpleDateFormat("HH:mm ss SSS");
-        Calendar calendar = Calendar.getInstance();
-        return formatter.format(calendar.getTime());
-    }
-
-    /**
-     * Get time and date
-     *
-     * @return {@link String}
-     */
-    public static String GetTimeandDate() {
-        DateFormat formatter = new SimpleDateFormat("[dd-MMM-yyyy|HH:mm:ss]");
-        Calendar calendar = Calendar.getInstance();
-        return formatter.format(calendar.getTime());
-    }
-
-    /**
-     * Get time and date without datalogger format
-     *
-     * @return {@link String}
-     */
-    public static String GetTimeandDateUpdate() {
-        DateFormat formatter = new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss");
-        Calendar calendar = Calendar.getInstance();
-        return formatter.format(calendar.getTime());
-    }
-
-    /**
      * Setting the shared preference with values provided as parameters
      *
      * @param context
@@ -504,34 +445,10 @@ public class Utils {
         return pref.contains(key);
     }
 
-    // See CDT 251485
-    // This method returns number format in default en_US locale.
-    // This method fixes NumberFormatException thrown when the following condition holds true
-    // 1. System's locale is different from en_US whose decimal point representation
-    // is different from en_US's '.' (e.g. ',' in ua_UK for Ukraine).
-    // 2. There are places in code where floating number is first converted to string via NumberFormat.format(float)
-    // and then parsed back to floating number via Float.valueOf(string) which in turn is locale independent
-    // and only respects '.' as a decimal point (and throws NFE for ',' as a decimal point).
-    // So previously it was possible to get a NFE in the following case
-    // 1. Set default locale to ua_UK.
-    // 2. Get locale-specific NumberFormat instance via NumberFormat.getInstance().
-    // 3. Get locale-specific floating number string by formatting it via NumberFormat.format(float).
-    // 4. Parse string back to number via Float.valueOf(string)... here NFE is thrown
-    public static NumberFormat getNumberFormatForRootLocale() {
-        return NumberFormat.getNumberInstance(DATA_LOCALE);
-    }
-
-    public static NumberFormat getNumberFormatForDefaultLocale() {
-        return NumberFormat.getNumberInstance();
-    }
-
     public static String formatForRootLocale(String format, Object... args) {
         return String.format(DATA_LOCALE, format, args);
     }
 
-    public static String formatForDefaultLocale(String format, Object... args) {
-        return String.format(format, args);
-    }
 
     /**
      * Read version name from the manifest

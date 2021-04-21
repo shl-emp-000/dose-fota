@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.BatteryManager;
+import android.os.Bundle;
 
 import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
 import com.innovationzed.fotalibrary.BackendCommunication.BackendApiRequest;
@@ -31,20 +32,24 @@ public class FotaApi {
     private BackendApiRequest mBackend;
 
     private boolean mUpdatePossible;
-    private boolean mUpdatePossibleChecked;
 
-//    private BroadcastReceiver mOTAStatusReceiver = new BroadcastReceiver() {
-//        @Override
-//        public void onReceive(Context context, Intent intent) {
-//            synchronized (this) {
-//                final String action = intent.getAction();
-//                if (action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) || action.equals(BluetoothLeService.ACTION_OTA_FAIL)){
-//                    mContext.stopService(mIntent);
-//                }
-//            }
-//        }
-//    };
+    private BroadcastReceiver mOTAStatusReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            synchronized (this) {
+                final String action = intent.getAction();
+                if (action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) || action.equals(BluetoothLeService.ACTION_OTA_FAIL)){
+                    mContext.stopService(mIntent);
+                }
+            }
+        }
+    };
 
+    /**
+     * API for performing firmware updates over-the-air via BLE
+     * @param context: the current context
+     * @param macAddress: MAC address of the device
+     */
     public FotaApi (Context context, String macAddress){
         this.macAddress = macAddress;
 
@@ -53,45 +58,57 @@ public class FotaApi {
         mBackend = new BackendApiRequest(context);
 
         // Register receiver
-//        BluetoothLeService.registerBroadcastReceiver(mContext, mOTAStatusReceiver, Utils.makeOTAFinishedIntentFilter());
+        BluetoothLeService.registerBroadcastReceiver(mContext, mOTAStatusReceiver, Utils.makeOTAIntentFilter());
 
         // Set up dummy device data
-        mDeviceInformation = new Hashtable();
-        getDeviceInformation();
+        mDeviceInformation = Utils.getDeviceInformation(); //TODO: use real data when a BLE status request is available
 
-        // Check if firmware update is possible
         mUpdatePossible = false;
-        mUpdatePossibleChecked = false;
+    }
+
+    /**
+     * Checks if a firmware update is possible. The following criteria applies:
+     * - phone battery level (>= 50%)
+     * - device battery level (>= 50%)
+     * - phone connected to wifi
+     * - firmware update exists
+     *
+     * When the check is done one of the following actions will be broadcasted:
+     * - BluetoothLeService.ACTION_OTA_IS_POSSIBLE
+     * - BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE
+     */
+    public void isFirmwareUpdatePossible(){
         checkFirmwareUpdatePossible();
     }
 
-    public boolean isFirmwareUpdatePossible(){
-        if (mUpdatePossibleChecked){
-            return mUpdatePossible;
-        }
-        return false;
-    }
-
+    /**
+     * Update the firmware over-the-air via BLE. The device needs to be in boot mode before calling this method.
+     *
+     * @param userConfirmation: if the user has confirmed that they want to do a firmware update of their device
+     *
+     * If the firmware update finishes successfully the following action will be broadcasted:
+     * - BluetoothLeService.ACTION_OTA_SUCCESS
+     * If the firmware update fails the following action will be broadcasted:
+     * - BluetoothLeService.ACTION_OTA_FAIL
+     */
     public void doFirmwareUpdate(boolean userConfirmation){
         if (userConfirmation){
             mContext.startService(mIntent);
         }
     }
 
-    private void getDeviceInformation(){
-        mDeviceInformation.put("deviceSN", "12345");
-        mDeviceInformation.put("firmwareVersion", "0.3.0");
-        mDeviceInformation.put("batteryLevel", 75);
-    }
 
-    public static String getDeviceSN(){
-        return (String) mDeviceInformation.get("deviceSN");
-    }
+    /********** PRIVATE HELPER FUNCTIONS **********/
 
-    public static String getDeviceFirmwareVersion(){
-        return (String) mDeviceInformation.get("firmwareVersion");
-    }
-
+    /**
+     * Compares two version number strings
+     *
+     * @param version1
+     * @param version2
+     * @return  1 if version1 > version2
+     *          0 if version1 = version2
+     *          -1 if version1 < version2
+     */
     private int compareVersion(String version1, String version2) {
         String[] array1 = version1.split("\\.");
         String[] array2 = version2.split("\\.");
@@ -118,52 +135,78 @@ public class FotaApi {
         return 0;
     }
 
+    /**
+     * Checks if a firmware update is possible. The following criteria applies:
+     * - phone battery level (>= 50%)
+     * - device battery level (>= 50%)
+     * - phone connected to wifi
+     * - firmware update exists
+     *
+     * When the check is done one of the following actions will be broadcasted:
+     * - BluetoothLeService.ACTION_OTA_IS_POSSIBLE
+     * - BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE
+     */
     private void checkFirmwareUpdatePossible(){
+        mUpdatePossible = true;
         // Check wifi
-        boolean wifi = Utils.checkWifi(mContext);
+        mUpdatePossible = mUpdatePossible && Utils.checkWifi(mContext);
 
-        if (wifi){
+        // Check phone battery
+        BatteryManager bm = (BatteryManager)mContext.getSystemService(mContext.BATTERY_SERVICE);
+        int percentage = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        mUpdatePossible = mUpdatePossible && percentage >= 50;
+
+        // Check device battery
+        mUpdatePossible = mUpdatePossible && (int)mDeviceInformation.get("batteryLevel") >= 50;
+
+        if (!mUpdatePossible) {
+            broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
+        } else {
             // Get latest available firmware version and do the checks on response
             Callback callback = new Callback<List<Firmware>>() {
                 @Override
                 public void onResponse(Call<List<Firmware>> call, Response<List<Firmware>> response) {
 
                     if (!response.isSuccessful()) {
-                        return;
-                    }
-                    List<Firmware> versions = response.body();
-                    latestFirmwareVersion = versions.get(0).getFirmwareVersion();
+                        mUpdatePossible = false;
+                        broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
+                    } else {
+                        List<Firmware> versions = response.body();
+                        latestFirmwareVersion = versions.get(0).getFirmwareVersion();
 
-                    boolean updatePossible = true;
+                        // Compare firmware versions
+                        if (compareVersion((String)mDeviceInformation.get("firmwareVersion"), latestFirmwareVersion) >= 0){
+                            mUpdatePossible = false;
+                        }
 
-                    // Compare firmware versions
-                    if (compareVersion((String)mDeviceInformation.get("firmwareVersion"), latestFirmwareVersion) >= 0){
-                        updatePossible = false;
-                    }
-
-                    // Check phone battery
-                    BatteryManager bm = (BatteryManager)mContext.getSystemService(mContext.BATTERY_SERVICE);
-                    int percentage = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-                    if (percentage < 50){
-                        updatePossible = false;
-                    }
-
-                    // Check device battery
-                    if ((int)mDeviceInformation.get("batteryLevel") < 50){
-                        updatePossible = false;
+                        if (mUpdatePossible) {
+                            broadcast(BluetoothLeService.ACTION_OTA_IS_POSSIBLE);
+                        } else {
+                            broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
+                        }
                     }
 
-                    mUpdatePossible = updatePossible;
-                    mUpdatePossibleChecked = true;
                 }
 
                 @Override
                 public void onFailure(Call<List<Firmware>> call, Throwable t) {
+                    broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
                 }
             };
 
             mBackend.getLatestFirmwareVersion(callback);
         }
 
+    }
+
+    /**
+     * Sends a global broadcast
+     * @param action
+     */
+    private void broadcast(String action){
+        Intent intent = new Intent(action);
+        Bundle bundle = new Bundle();
+        intent.putExtras(bundle);
+        BluetoothLeService.sendGlobalBroadcastIntent(mContext, intent);
     }
 }

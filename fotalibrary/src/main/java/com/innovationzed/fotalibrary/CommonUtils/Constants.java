@@ -170,19 +170,5 @@ public class Constants {
     public static final String PREF_UNPAIR_ON_DISCONNECT = "PREF_UNPAIR_ON_DISCONNECT";
     public static final boolean PREF_DEFAULT_UNPAIR_ON_DISCONNECT = false;
 
-    /**
-     * Pair the device upon connect
-     */
-    public static final String PREF_PAIR_ON_CONNECT = "PREF_PAIR_ON_CONNECT";
-    public static final String PREF_WAIT_FOR_PAIRING_REQUEST_FROM_PERIPHERAL_SECONDS = "PREF_WAIT_FOR_PAIRING_REQUEST_FROM_DEVICE_SECONDS";
-    public static final String PREF_LOCATION_REQUIRED_DONT_ASK_AGAIN = "PREF_LOCATION_REQUIRED_DONT_ASK_AGAIN";
-
-    /**
-     * Fragment Tags
-     */
-    public static String HOME_PAGE_TABS_FRAGMENT_TAG = "home page tabs";
-    public static String PROFILE_SCANNING_FRAGMENT_TAG = "profile scanning";
-    public static String PAIRED_PROFILES_FRAGMENT_TAG = "paired profiles";
-    public static String FOTA_FRAGMENT_TAG = "fota fragment tag";
 
 }
