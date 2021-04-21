@@ -22,10 +22,6 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
-    <!--
-    Apps that target Android 10 (API level 29) can still request the requestLegacyExternalStorage attribute.
-    After you update your app to target Android 11, the system ignores the requestLegacyExternalStorage flag.
-    -->
     <application
         android:allowBackup="true"
         android:enabled="true"

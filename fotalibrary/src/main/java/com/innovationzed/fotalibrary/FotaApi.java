@@ -92,7 +92,7 @@ public class FotaApi {
      * - BluetoothLeService.ACTION_OTA_FAIL
      */
     public void doFirmwareUpdate(boolean userConfirmation){
-        if (userConfirmation){
+        if (userConfirmation && mUpdatePossible){
             mContext.startService(mIntent);
         }
     }
