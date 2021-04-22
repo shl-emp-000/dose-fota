@@ -74,6 +74,11 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
     private int mFlowRetryNum;
     private boolean mReprogramCurrentRow;
 
+    private Handler mOTATimeoutHandler; // A handler to run a repeating task to check
+    private int mInterval = 30000; // Interval for running the timeout check
+    private static final int TIME_LIMIT_OTA = 30000; // Time limit to get a response from the device during ota
+    private static long timestampStatus;
+
     public OTAFUHandler_v1(Context context, BluetoothGattCharacteristic otaCharacteristic, String filepath, OTAFUHandlerCallback callback) {
         super(context, otaCharacteristic, Constants.ACTIVE_APP_NO_CHANGE, Constants.NO_SECURITY_KEY, filepath, callback);//AppId will be taken from the header line of the file
         //Prefer WriteNoResponse over WriteWithResponse
@@ -106,14 +111,48 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
 
     private void startOTA() {
         setFileUpgradeStarted(true);
+        mOTATimeoutHandler = new Handler();
+        timestampStatus = System.currentTimeMillis();
+        startRepeatingTask();
 
         mSyncRetryNum = mProgramRetryNum = mFlowRetryNum = 0;
         mReprogramCurrentRow = false;
         processOTAStatus(BEGIN, new Bundle());
     }
 
+    Runnable mStatusChecker = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                if (!checkTimeSinceLastOTAStatus()){
+                    OTAFinished(ACTION_OTA_FAIL, "Timeout/device disconnected");
+                }
+            } finally {
+                // 100% guarantee that this always happens, even if
+                // your update method throws an exception
+                mOTATimeoutHandler.postDelayed(mStatusChecker, mInterval);
+            }
+        }
+    };
+
+    private boolean checkTimeSinceLastOTAStatus(){
+        if (System.currentTimeMillis() - timestampStatus > TIME_LIMIT_OTA){
+            return false;
+        }
+        return true;
+    }
+
+    private void startRepeatingTask() {
+        mStatusChecker.run();
+    }
+
+    private void stopRepeatingTask() {
+        mOTATimeoutHandler.removeCallbacks(mStatusChecker);
+    }
+
     @Override
     public void processOTAStatus(String status, Bundle extras) {
+        timestampStatus = System.currentTimeMillis();
         if (extras.containsKey(Constants.EXTRA_ERROR_OTA) && FLOW_RETRY_LIMIT > mFlowRetryNum) {
             if (status.equalsIgnoreCase("" + BootLoaderCommands_v1.SYNC) || status.equalsIgnoreCase(BootLoaderCommands_v1.POST_SYNC_ENTER_BOOTLOADER)) {
                 if (SYNC_RETRY_LIMIT > mSyncRetryNum) {
@@ -268,6 +307,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
 
     private void OTAFinished(String action, String reason){
         resetSharedPreferences();
+        stopRepeatingTask();
         Utils.broadcastOTAFinished(getContext(), action, reason);
     }
 
