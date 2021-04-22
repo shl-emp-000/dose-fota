@@ -24,7 +24,7 @@ public class FotaApi {
 
     public static String macAddress;
     public static String latestFirmwareVersion;
-    public static final String ROOT_DIR = "/storage/emulated/0/CySmart";
+    public static final String ROOT_DIR = "/storage/emulated/0/IZ_FOTA";
 
     private Context mContext;
     private Intent mIntent;

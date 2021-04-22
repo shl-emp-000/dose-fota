@@ -62,7 +62,7 @@ import java.util.regex.Pattern;
 public class Utils {
 
     // Shared preference constant
-    private static final String SHARED_PREF_NAME = "CySmart Shared Preference";
+    private static final String SHARED_PREF_NAME = "FOTA Shared Preference";
 
     private static final String BASE_UUID_FORMAT = "(((0000)|(\\d{4}))(\\d{4}))-0000-1000-8000-00805F9B34FB";
     private static final Pattern BASE_UUID_PATTERN = Pattern.compile(BASE_UUID_FORMAT, Pattern.CASE_INSENSITIVE);

@@ -53,6 +53,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import static com.innovationzed.fotalibrary.FotaApi.ROOT_DIR;
 import static com.innovationzed.fotalibrary.OTAFirmwareUpdate.OTAFirmwareUpgrade.DOWNLOADED_FIRMWARE_DIR;
 
 public class OTAFUHandler_v1 extends OTAFUHandlerBase {
@@ -281,6 +282,12 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
         if (file.exists()) {
             file.delete();
         }
+        // Delete firmware folder
+        File folder = new File(ROOT_DIR);
+        if (folder.exists()){
+            folder.delete();
+        }
+
         // Broadcast action
         Intent otaFinishedIntent = new Intent(action);
         Bundle bundle = new Bundle();

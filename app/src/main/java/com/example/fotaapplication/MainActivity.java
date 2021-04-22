@@ -123,7 +123,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // Since Marshmallow either ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION permission is required for BLE scan
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // Grant permission to CySmart to access Location Service
+            // Grant permission to access Location Service
             if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 final AlertDialog.Builder builder = new AlertDialog.Builder(this);
                 builder.setTitle(R.string.alert_message_permission_required_title)

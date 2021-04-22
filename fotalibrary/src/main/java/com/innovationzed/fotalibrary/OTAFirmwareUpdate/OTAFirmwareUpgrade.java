@@ -164,10 +164,17 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                     if (!response.isSuccessful()) {
                         return;
                     }
+                    // Get filename from Content-Disposition
                     String contentDisposition = response.raw().header("Content-Disposition");
                     String strFilename = "filename=";
                     int startIndex = contentDisposition.indexOf(strFilename);
                     String filename = contentDisposition.substring(startIndex + strFilename.length());
+
+                    // Create folder ROOT_DIR if it doesn't exist
+                    File folder = new File(ROOT_DIR);
+                    if (!folder.exists()) {
+                        folder.mkdir();
+                    }
                     mNewFirmwarePath =  ROOT_DIR + File.separator + filename;
                     boolean writtenToDisk = writeResponseBodyToDisk(response.body(), mNewFirmwarePath);
 
