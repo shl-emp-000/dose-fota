@@ -43,23 +43,16 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.util.Log;
 
 import androidx.annotation.Nullable;
 
 import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
-import com.innovationzed.fotalibrary.BackendCommunication.BackendApiRequest;
 import com.innovationzed.fotalibrary.CommonUtils.Constants;
 import com.innovationzed.fotalibrary.CommonUtils.GattAttributes;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
 import com.innovationzed.fotalibrary.FotaApi;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationHandler;
@@ -70,21 +63,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-import okhttp3.ResponseBody;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_OTA_FAIL;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_CONNECTED;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_DISCONNECTED;
-import static com.innovationzed.fotalibrary.FotaApi.ROOT_DIR;
+import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
 
 /**
  * OTA update fragment
  */
 public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback {
-    public static String DOWNLOADED_FIRMWARE_DIR;
-
     private final IBinder mBinder = new LocalBinder();
     public boolean mBound;
 
@@ -103,8 +90,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     private static ArrayList<HashMap<String, BluetoothGattService>> mGattServiceMasterData = new ArrayList<>();
 
     private static BluetoothGattService mService;
-    private String mNewFirmwarePath;
-    private BackendApiRequest mBackend;
 
     private static OTAFUHandler DUMMY_HANDLER = (OTAFUHandler) Proxy.newProxyInstance(OTAFirmwareUpgrade.class.getClassLoader(), new Class<?>[]{OTAFUHandler.class}, new InvocationHandler() {
         @Override
@@ -154,57 +139,29 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         BluetoothLeService.registerBroadcastReceiver(this, mGattOTAStatusReceiver, Utils.makeGattUpdateIntentFilter());
         BluetoothLeService.registerBroadcastReceiver(this, mOTAResponseReceiverV1, Utils.makeOTADataFilter());
         BluetoothLeService.registerBroadcastReceiver(this, mOTAResponseReceiverV0, Utils.makeOTADataFilterV0());
-        mBackend = new BackendApiRequest(this);
 
-        if(connectAndDiscoverServices()){
-            Callback<ResponseBody> callback = new Callback<ResponseBody>() {
-                @Override
-                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-
-                    if (!response.isSuccessful()) {
-                        return;
-                    }
-                    // Get filename from Content-Disposition
-                    String contentDisposition = response.raw().header("Content-Disposition");
-                    String strFilename = "filename=";
-                    int startIndex = contentDisposition.indexOf(strFilename);
-                    String filename = contentDisposition.substring(startIndex + strFilename.length());
-
-                    // Create folder ROOT_DIR if it doesn't exist
-                    File folder = new File(ROOT_DIR);
-                    if (!folder.exists()) {
-                        folder.mkdir();
-                    }
-                    mNewFirmwarePath =  ROOT_DIR + File.separator + filename;
-                    boolean writtenToDisk = writeResponseBodyToDisk(response.body(), mNewFirmwarePath);
-
-                    if (writtenToDisk) {
-                        DOWNLOADED_FIRMWARE_DIR = mNewFirmwarePath;
-                        doFota();
-                    } else {
-                    }
-
-                }
-
-                @Override
-                public void onFailure(Call<ResponseBody> call, Throwable t) {
-                }
-            };
-            mBackend.downloadLatestFirmwareFile(callback);
+        boolean result = connectAndDiscoverServices();
+        if(result){
+            doFota();
+        } else {
+            OTAFinished(ACTION_OTA_FAIL, "Could not connect or discover services of device.");
         }
     }
 
     private void doFota(){
         OTAFirmwareUpgrade.mOtaCharacteristic = getGattData();
+        if (OTAFirmwareUpgrade.mOtaCharacteristic == null){
+            OTAFinished(ACTION_OTA_FAIL, "getGattData() failed (OTAFirmwareUpgrade.mOtaCharacteristic is null)");
+        }
 
-        boolean isCyacd2File = mNewFirmwarePath != null && isCyacd2File(mNewFirmwarePath);
+        boolean isCyacd2File = DOWNLOADED_FIRMWARE_DIR != null && isCyacd2File(DOWNLOADED_FIRMWARE_DIR);
         Utils.setBooleanSharedPreference(this, Constants.PREF_IS_CYACD2_FILE, isCyacd2File);
-        mOTAFUHandler = new OTAFUHandler_v1(this, OTAFirmwareUpgrade.mOtaCharacteristic, mNewFirmwarePath, this, mBackend);
+        mOTAFUHandler = new OTAFUHandler_v1(this, OTAFirmwareUpgrade.mOtaCharacteristic, DOWNLOADED_FIRMWARE_DIR, this);
 
         try {
-            prepareFileWrite();
+            mOTAFUHandler.prepareFileWrite();
         } catch (Exception e) {
-            showErrorDialogMessage("getResources().getString(R.string.ota_alert_invalid_file)", true);
+            OTAFinished(ACTION_OTA_FAIL, "Invalid firmware file.");
         }
     }
 
@@ -425,16 +382,10 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         OTAFUHandler handler = DUMMY_HANDLER;
         if (otaCharacteristic != null && filepath != null && filepath != "") {
             handler = isCyacd2File
-                    ? new OTAFUHandler_v1(this, otaCharacteristic, filepath, this, mBackend)
+                    ? new OTAFUHandler_v1(this, otaCharacteristic, filepath, this)
                     : new OTAFUHandler_v0(this, otaCharacteristic, activeApp, securityKey, filepath, this);
         }
         return handler;
-    }
-
-    private void prepareFileWrite() {
-        if (OTAFirmwareUpgrade.mOtaCharacteristic != null) {
-            mOTAFUHandler.prepareFileWrite();
-        }
     }
 
     /**
@@ -515,53 +466,8 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         return file.matches(REGEX_MATCHES_CYACD2);
     }
 
-    private boolean writeResponseBodyToDisk(ResponseBody body, String path) {
-        try {
-            File latestFirmwareFile = new File(path);//getExternalFilesDir(null) + File.separator + filename);
-
-            InputStream inputStream = null;
-            OutputStream outputStream = null;
-
-            try {
-                byte[] fileReader = new byte[4096];
-
-                long fileSize = body.contentLength();
-                long fileSizeDownloaded = 0;
-
-                inputStream = body.byteStream();
-                outputStream = new FileOutputStream(latestFirmwareFile);
-
-                while (true) {
-                    int read = inputStream.read(fileReader);
-
-                    if (read == -1) {
-                        break;
-                    }
-
-                    outputStream.write(fileReader, 0, read);
-
-                    fileSizeDownloaded += read;
-
-                    Log.d("File Download: " , fileSizeDownloaded + " of " + fileSize);
-                }
-
-                outputStream.flush();
-
-                return true;
-            } catch (IOException e) {
-                return false;
-            } finally {
-                if (inputStream != null) {
-                    inputStream.close();
-                }
-
-                if (outputStream != null) {
-                    outputStream.close();
-                }
-            }
-        } catch (IOException e) {
-            return false;
-        }
+    private void OTAFinished(String action, String reason){
+        Utils.broadcastOTAFinished(this, action, reason);
     }
 
 }

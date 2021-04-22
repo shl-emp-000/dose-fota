@@ -41,20 +41,17 @@ import android.os.Bundle;
 import android.os.Handler;
 
 import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
-import com.innovationzed.fotalibrary.BackendCommunication.BackendApiRequest;
 import com.innovationzed.fotalibrary.CommonUtils.CheckSumUtils;
 import com.innovationzed.fotalibrary.CommonUtils.Constants;
 import com.innovationzed.fotalibrary.CommonUtils.ConvertUtils;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
 import com.innovationzed.fotalibrary.DataModelClasses.OTAFlashRowModel_v1;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static com.innovationzed.fotalibrary.FotaApi.ROOT_DIR;
-import static com.innovationzed.fotalibrary.OTAFirmwareUpdate.OTAFirmwareUpgrade.DOWNLOADED_FIRMWARE_DIR;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_OTA_FAIL;
 
 public class OTAFUHandler_v1 extends OTAFUHandlerBase {
 
@@ -76,11 +73,9 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
     private int mProgramRetryNum;
     private int mFlowRetryNum;
     private boolean mReprogramCurrentRow;
-    private BackendApiRequest mBackendApi;
 
-    public OTAFUHandler_v1(Context context, BluetoothGattCharacteristic otaCharacteristic, String filepath, OTAFUHandlerCallback callback, BackendApiRequest backendApi) {
+    public OTAFUHandler_v1(Context context, BluetoothGattCharacteristic otaCharacteristic, String filepath, OTAFUHandlerCallback callback) {
         super(context, otaCharacteristic, Constants.ACTIVE_APP_NO_CHANGE, Constants.NO_SECURITY_KEY, filepath, callback);//AppId will be taken from the header line of the file
-        mBackendApi = backendApi;
         //Prefer WriteNoResponse over WriteWithResponse
         if ((otaCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0) {
             this.mMaxDataSize = BootLoaderCommands_v1.WRITE_NO_RESP_MAX_DATA_SIZE;
@@ -103,7 +98,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
                     mFileContents = customFileReader.readLines();
                     startOTA();
                 } catch (CustomFileReader_v1.InvalidFileFormatException e) {
-                    showErrorDialogMessage("getContext().getResources().getString(R.string.ota_alert_invalid_file)", true);
+                    OTAFinished(ACTION_OTA_FAIL, "Invalid firmware file");
                 }
             }
         }, 1000);
@@ -125,7 +120,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
                     ++mSyncRetryNum;
                 } else {
                     // Fail
-                    reportError(status, extras);
+                    OTAFinished(ACTION_OTA_FAIL, "Error in processOTAStatus: " + extras.getString(Constants.EXTRA_ERROR_OTA));
                     return;
                 }
             } else if ((status.equalsIgnoreCase("" + BootLoaderCommands_v1.SEND_DATA)
@@ -147,7 +142,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
 
         // Fail
         if (extras.containsKey(Constants.EXTRA_ERROR_OTA)) {
-            reportError(status, extras);
+            OTAFinished(ACTION_OTA_FAIL, "Error in processOTAStatus: " + extras.getString(Constants.EXTRA_ERROR_OTA));
             return;
         }
 
@@ -157,7 +152,6 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
             OTAFlashRowModel_v1.Header headerRow = (OTAFlashRowModel_v1.Header) mFileContents.get(CustomFileReader_v1.KEY_HEADER).get(0);
             mOtaFirmwareWrite.OTAEnterBootLoaderCmd(mCheckSumType, headerRow.mProductId);
             Utils.setStringSharedPreference(getContext(), Constants.PREF_BOOTLOADER_STATE, BootLoaderCommands_v1.POST_SYNC_ENTER_BOOTLOADER);
-//            mProgressText.setText("getContext().getResources().getText(R.string.ota_enter_bootloader)");
             return;
         }
 
@@ -192,7 +186,6 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
             //Send Enter Bootloader command
             mOtaFirmwareWrite.OTAEnterBootLoaderCmd(mCheckSumType, headerRow.mProductId);
             Utils.setStringSharedPreference(getContext(), Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands_v1.ENTER_BOOTLOADER);
-//            mProgressText.setText("getContext().getResources().getText(R.string.ota_enter_bootloader)");
         } else if (status.equalsIgnoreCase("" + BootLoaderCommands_v1.ENTER_BOOTLOADER)) {
             if (extras.containsKey(Constants.EXTRA_SILICON_ID) && extras.containsKey(Constants.EXTRA_SILICON_REV)) {
                 OTAFlashRowModel_v1.Header headerRow = (OTAFlashRowModel_v1.Header) mFileContents.get(CustomFileReader_v1.KEY_HEADER).get(0);
@@ -205,10 +198,9 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
 
                     mOtaFirmwareWrite.OTASetAppMetadataCmd(mCheckSumType, mActiveApp, appInfoRow.mAppStart, appInfoRow.mAppSize);
                     Utils.setStringSharedPreference(getContext(), Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands_v1.SET_APP_METADATA);
-//                    mProgressText.setText("getContext().getResources().getText(R.string.ota_set_application_metadata)");
                 } else {
                     //Wrong SiliconId and SiliconRev
-                    showErrorDialogMessage("getContext().getResources().getString(R.string.alert_message_silicon_id_mismatch_error)", true);
+                    OTAFinished(ACTION_OTA_FAIL, "Error: The SiliconID or SiliconRev does not match");
                     return;
                 }
             } else {
@@ -218,7 +210,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
                     processOTAStatus(BEGIN, extras); //Re-try complete flow
                     return;
                 } else {
-                    showErrorDialogMessage("getContext().getResources().getString(R.string.alert_message_no_silicon_id_error)", false);
+                    OTAFinished(ACTION_OTA_FAIL, "Error: Target returned no SiliconID");
                     return;
                 }
             }
@@ -248,8 +240,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
                         processOTAStatus(BEGIN, extras); //Re-try complete flow
                         return;
                     } else {
-                        OTAFinished(BluetoothLeService.ACTION_OTA_FAIL, "Failed firmware update VERIFY_APP.");
-                        showErrorDialogMessage("getContext().getResources().getString(R.string.alert_message_verify_application_error)", false);
+                        OTAFinished(ACTION_OTA_FAIL, "Error: Verification failed for the programmed application");
                         return;
                     }
                 }
@@ -261,7 +252,6 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
             BluetoothLeService.disconnect();
             BluetoothLeService.unpairDevice(device);
 
-            resetSharedPreferences();
             OTAFinished(BluetoothLeService.ACTION_OTA_SUCCESS, "Successful firmware update.");
         }
     }
@@ -277,30 +267,8 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
     }
 
     private void OTAFinished(String action, String reason){
-        // Delete firmware file
-        File file = new File(DOWNLOADED_FIRMWARE_DIR);
-        if (file.exists()) {
-            file.delete();
-        }
-        // Delete firmware folder
-        File folder = new File(ROOT_DIR);
-        if (folder.exists()){
-            folder.delete();
-        }
-
-        // Broadcast action
-        Intent otaFinishedIntent = new Intent(action);
-        Bundle bundle = new Bundle();
-        otaFinishedIntent.putExtras(bundle);
-        BluetoothLeService.sendGlobalBroadcastIntent(getContext(), otaFinishedIntent);
-
-        // POST result to web app
-        boolean success = true;
-        if (action.equals(BluetoothLeService.ACTION_OTA_FAIL)) {
-            success = false;
-        }
-
-        mBackendApi.postFotaResult(success, reason);
+        resetSharedPreferences();
+        Utils.broadcastOTAFinished(getContext(), action, reason);
     }
 
     private void programNextRow() {
@@ -321,18 +289,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
             //Programming done, send VerifyApplication command
             mOtaFirmwareWrite.OTAVerifyAppCmd(mCheckSumType, mActiveApp);
             Utils.setStringSharedPreference(getContext(), Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands_v1.VERIFY_APP);
-//            mProgressText.setText("getContext().getResources().getText(R.string.ota_verify_application)");
         }
-    }
-
-    private void reportError(String status, Bundle extras) {
-        String errorString = extras.getString(Constants.EXTRA_ERROR_OTA);
-        String statusString = status;
-        try {
-            statusString = "0x" + Integer.toHexString(Integer.parseInt(status));
-        } catch (NumberFormatException e) {
-        }
-        showErrorDialogMessage("getContext().getResources().getString(R.string.alert_message_ota_error) + errorString", false);
     }
 
     private void writeEivOrData(int rowNum) {
@@ -366,7 +323,6 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
                 mOtaFirmwareWrite.OTASendDataWithoutResponseCmd(mCheckSumType, payload);
                 Utils.setStringSharedPreference(getContext(), Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands_v1.SEND_DATA_WITHOUT_RESPONSE);
                 Utils.setIntSharedPreference(getContext(), Constants.PREF_PROGRAM_ROW_START_POS, startPosition);
-//                mProgressText.setText("getContext().getResources().getText(R.string.ota_program_row)");
 
                 new Handler().postDelayed(new Runnable() {
                     @Override
@@ -383,7 +339,6 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
                 mOtaFirmwareWrite.OTASendDataCmd(mCheckSumType, payload);
                 Utils.setStringSharedPreference(getContext(), Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands_v1.SEND_DATA);
                 Utils.setIntSharedPreference(getContext(), Constants.PREF_PROGRAM_ROW_START_POS, startPosition);
-//                mProgressText.setText("getContext().getResources().getText(R.string.ota_program_row)");
             }
         } else {
             //Send ProgramData command
@@ -392,7 +347,6 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
             mOtaFirmwareWrite.OTAProgramDataCmd(mCheckSumType, dataRow.mAddress, baCrc32, payload);
             Utils.setStringSharedPreference(getContext(), Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands_v1.PROGRAM_DATA);
             Utils.setIntSharedPreference(getContext(), Constants.PREF_PROGRAM_ROW_START_POS, 0);
-//            mProgressText.setText("getContext().getResources().getText(R.string.ota_program_row)");
         }
     }
 
@@ -402,6 +356,5 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
         mOtaFirmwareWrite.OTASetEivCmd(mCheckSumType, eivRow.mEiv);
         Utils.setStringSharedPreference(getContext(), Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands_v1.SET_EIV);
         Utils.setIntSharedPreference(getContext(), Constants.PREF_PROGRAM_ROW_START_POS, 0);
-//        mProgressText.setText("getContext().getResources().getText(R.string.ota_set_eiv)");
     }
 }

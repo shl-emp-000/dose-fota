@@ -38,6 +38,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.content.Context;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -47,19 +48,33 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Bundle;
+import android.util.Log;
 
 import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import okhttp3.ResponseBody;
+
+import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
+import static com.innovationzed.fotalibrary.FotaApi.ROOT_DIR;
+
 /**
  * Class for commonly used methods in the project
  */
 public class Utils {
+
+    public static final String OTA_REASON = "OTA_REASON";
 
     // Shared preference constant
     private static final String SHARED_PREF_NAME = "FOTA Shared Preference";
@@ -80,6 +95,84 @@ public class Utils {
         deviceInfo.put("firmwareVersion", "0.3.0");
         deviceInfo.put("batteryLevel", 75);
         return deviceInfo;
+    }
+
+    /**
+     * Delete the firmware file and folder
+     */
+    public static void deleteFirmwareFileAndFolder(){
+        // Delete firmware file
+        if (DOWNLOADED_FIRMWARE_DIR != null){
+            File file = new File(DOWNLOADED_FIRMWARE_DIR);
+            if (file.exists()) {
+                file.delete();
+            }
+        }
+
+        // Delete firmware folder
+        if (ROOT_DIR != null){
+            File folder = new File(ROOT_DIR);
+            if (folder.exists()){
+                folder.delete();
+            }
+        }
+    }
+
+    public static void broadcastOTAFinished(Context context, String action, String reason){
+        Intent otaFinishedIntent = new Intent(action);
+        Bundle bundle = new Bundle();
+        bundle.putString(OTA_REASON, reason);
+        otaFinishedIntent.putExtras(bundle);
+        BluetoothLeService.sendLocalBroadcastIntent(context, otaFinishedIntent);
+    }
+
+    public static boolean writeResponseBodyToDisk(ResponseBody body, String path) {
+        try {
+            File latestFirmwareFile = new File(path);
+
+            InputStream inputStream = null;
+            OutputStream outputStream = null;
+
+            try {
+                byte[] fileReader = new byte[4096];
+
+                long fileSize = body.contentLength();
+                long fileSizeDownloaded = 0;
+
+                inputStream = body.byteStream();
+                outputStream = new FileOutputStream(latestFirmwareFile);
+
+                while (true) {
+                    int read = inputStream.read(fileReader);
+
+                    if (read == -1) {
+                        break;
+                    }
+
+                    outputStream.write(fileReader, 0, read);
+
+                    fileSizeDownloaded += read;
+
+                    Log.d("File Download: " , fileSizeDownloaded + " of " + fileSize);
+                }
+
+                outputStream.flush();
+
+                return true;
+            } catch (IOException e) {
+                return false;
+            } finally {
+                if (inputStream != null) {
+                    inputStream.close();
+                }
+
+                if (outputStream != null) {
+                    outputStream.close();
+                }
+            }
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     /**

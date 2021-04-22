@@ -12,18 +12,22 @@ import com.innovationzed.fotalibrary.BackendCommunication.Firmware;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
 import com.innovationzed.fotalibrary.OTAFirmwareUpdate.OTAFirmwareUpgrade;
 
+import java.io.File;
 import java.util.Dictionary;
-import java.util.Hashtable;
 import java.util.List;
 
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+
+import static com.innovationzed.fotalibrary.CommonUtils.Utils.OTA_REASON;
 
 public class FotaApi {
 
     public static String macAddress;
     public static String latestFirmwareVersion;
+    public static String DOWNLOADED_FIRMWARE_DIR;
     public static final String ROOT_DIR = "/storage/emulated/0/IZ_FOTA";
 
     private Context mContext;
@@ -39,6 +43,16 @@ public class FotaApi {
             synchronized (this) {
                 final String action = intent.getAction();
                 if (action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) || action.equals(BluetoothLeService.ACTION_OTA_FAIL)){
+                    Utils.deleteFirmwareFileAndFolder();
+
+                    Boolean success = action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) ? true : false;
+                    String reason = action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) ? "N/A" : "Default fail message";
+
+                    Bundle bundle = intent.getExtras();
+                    if (bundle.containsKey(OTA_REASON)){
+                        reason = bundle.getString(OTA_REASON);
+                    }
+                    mBackend.postFotaResult(success, reason);
                     mContext.stopService(mIntent);
                 }
             }
@@ -148,6 +162,7 @@ public class FotaApi {
      */
     private void checkFirmwareUpdatePossible(){
         mUpdatePossible = true;
+
         // Check wifi
         mUpdatePossible = mUpdatePossible && Utils.checkWifi(mContext);
 
@@ -179,8 +194,46 @@ public class FotaApi {
                             mUpdatePossible = false;
                         }
 
+                        // Download firmware file
+                        Callback<ResponseBody> callback = new Callback<ResponseBody>() {
+                            @Override
+                            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+
+                                if (!response.isSuccessful()) {
+                                    mUpdatePossible = false;
+                                    broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
+                                    return;
+                                }
+                                // Get filename from Content-Disposition
+                                String contentDisposition = response.raw().header("Content-Disposition");
+                                String strFilename = "filename=";
+                                int startIndex = contentDisposition.indexOf(strFilename);
+                                String filename = contentDisposition.substring(startIndex + strFilename.length());
+
+                                // Create folder ROOT_DIR if it doesn't exist
+                                File folder = new File(ROOT_DIR);
+                                if (!folder.exists()) {
+                                    folder.mkdir();
+                                }
+                                String firmwarePath =  ROOT_DIR + File.separator + filename;
+                                boolean writtenToDisk = Utils.writeResponseBodyToDisk(response.body(), firmwarePath);
+
+                                if (writtenToDisk) {
+                                    DOWNLOADED_FIRMWARE_DIR = firmwarePath;
+                                    broadcast(BluetoothLeService.ACTION_OTA_IS_POSSIBLE);
+                                } else {
+                                    broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
+                                }
+                            }
+
+                            @Override
+                            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                                broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
+                            }
+                        };
+
                         if (mUpdatePossible) {
-                            broadcast(BluetoothLeService.ACTION_OTA_IS_POSSIBLE);
+                            mBackend.downloadLatestFirmwareFile(callback);
                         } else {
                             broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
                         }
@@ -207,6 +260,6 @@ public class FotaApi {
         Intent intent = new Intent(action);
         Bundle bundle = new Bundle();
         intent.putExtras(bundle);
-        BluetoothLeService.sendGlobalBroadcastIntent(mContext, intent);
+        BluetoothLeService.sendLocalBroadcastIntent(mContext, intent);
     }
 }
