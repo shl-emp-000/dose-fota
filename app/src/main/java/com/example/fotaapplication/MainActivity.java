@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     mFirmwareUpdatePossible = true;
                     setTextInformation("Firmware update is possible.");
                 } else if (action.equals(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE)){
-                    setTextInformation("Firmare update is not possible.");
+                    setTextInformation("Firmware update is not possible.");
                 }
             }
         }

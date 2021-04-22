@@ -30,7 +30,7 @@ public class FotaApi {
     public static String macAddress;
     public static String latestFirmwareVersion;
     public static String DOWNLOADED_FIRMWARE_DIR;
-    public static final String ROOT_DIR = "/storage/emulated/0/IZ_FOTA";
+    public static final String ROOT_DIR = "/storage/emulated/0/Download";
 
     private Context mContext;
     private Intent mIntent;
@@ -45,7 +45,7 @@ public class FotaApi {
             synchronized (this) {
                 final String action = intent.getAction();
                 if (action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) || action.equals(BluetoothLeService.ACTION_OTA_FAIL)){
-                    Utils.deleteFirmwareFileAndFolder();
+                    Utils.deleteFirmwareFile();
 
                     Boolean success = action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) ? true : false;
                     String reason = action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) ? "N/A" : "Default fail message";
@@ -111,6 +111,10 @@ public class FotaApi {
         if (userConfirmation && mUpdatePossible){
             mContext.startService(mIntent);
         }
+        else {
+            Utils.deleteFirmwareFile();
+        }
+
     }
 
 

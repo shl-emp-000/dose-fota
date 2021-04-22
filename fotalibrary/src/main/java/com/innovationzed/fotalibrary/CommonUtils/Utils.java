@@ -100,20 +100,12 @@ public class Utils {
     /**
      * Delete the firmware file and folder
      */
-    public static void deleteFirmwareFileAndFolder(){
+    public static void deleteFirmwareFile(){
         // Delete firmware file
         if (DOWNLOADED_FIRMWARE_DIR != null){
             File file = new File(DOWNLOADED_FIRMWARE_DIR);
             if (file.exists()) {
                 file.delete();
-            }
-        }
-
-        // Delete firmware folder
-        if (ROOT_DIR != null){
-            File folder = new File(ROOT_DIR);
-            if (folder.exists()){
-                folder.delete();
             }
         }
     }
