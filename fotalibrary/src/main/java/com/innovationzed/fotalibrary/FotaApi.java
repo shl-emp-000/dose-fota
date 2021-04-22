@@ -1,8 +1,10 @@
 package com.innovationzed.fotalibrary;
 
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.BatteryManager;
 import android.os.Bundle;
 
@@ -127,6 +129,12 @@ public class FotaApi {
      */
     private void checkFirmwareUpdatePossible(){
         mUpdatePossible = true;
+
+        // Check permissions
+        mUpdatePossible = mUpdatePossible &&
+                mContext.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
+                mContext.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
+                mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
 
         // Check wifi
         mUpdatePossible = mUpdatePossible && Utils.checkWifi(mContext);
