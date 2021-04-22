@@ -115,41 +115,6 @@ public class FotaApi {
     /********** PRIVATE HELPER FUNCTIONS **********/
 
     /**
-     * Compares two version number strings
-     *
-     * @param version1
-     * @param version2
-     * @return  1 if version1 > version2
-     *          0 if version1 = version2
-     *          -1 if version1 < version2
-     */
-    private int compareVersion(String version1, String version2) {
-        String[] array1 = version1.split("\\.");
-        String[] array2 = version2.split("\\.");
-
-        int i = 0;
-        while (i < array1.length || i < array2.length){
-            if (i < array1.length && i < array2.length){
-                if (Integer.parseInt(array1[i]) < Integer.parseInt(array2[i])) {
-                    return -1;
-                } else if (Integer.parseInt(array1[i]) > Integer.parseInt(array2[i])) {
-                    return 1;
-                }
-            } else if (i < array1.length) {
-                if (Integer.parseInt(array1[i]) != 0) {
-                    return 1;
-                }
-            } else if (i < array2.length) {
-                if (Integer.parseInt(array2[i]) != 0) {
-                    return -1;
-                }
-            }
-            i++;
-        }
-        return 0;
-    }
-
-    /**
      * Checks if a firmware update is possible. The following criteria applies:
      * - phone battery level (>= 50%)
      * - device battery level (>= 50%)
@@ -253,7 +218,7 @@ public class FotaApi {
     }
 
     /**
-     * Sends a global broadcast
+     * Sends a local broadcast
      * @param action
      */
     private void broadcast(String action){
@@ -261,5 +226,40 @@ public class FotaApi {
         Bundle bundle = new Bundle();
         intent.putExtras(bundle);
         BluetoothLeService.sendLocalBroadcastIntent(mContext, intent);
+    }
+
+    /**
+     * Compares two version number strings
+     *
+     * @param version1
+     * @param version2
+     * @return  1 if version1 > version2
+     *          0 if version1 = version2
+     *          -1 if version1 < version2
+     */
+    private int compareVersion(String version1, String version2) {
+        String[] array1 = version1.split("\\.");
+        String[] array2 = version2.split("\\.");
+
+        int i = 0;
+        while (i < array1.length || i < array2.length){
+            if (i < array1.length && i < array2.length){
+                if (Integer.parseInt(array1[i]) < Integer.parseInt(array2[i])) {
+                    return -1;
+                } else if (Integer.parseInt(array1[i]) > Integer.parseInt(array2[i])) {
+                    return 1;
+                }
+            } else if (i < array1.length) {
+                if (Integer.parseInt(array1[i]) != 0) {
+                    return 1;
+                }
+            } else if (i < array2.length) {
+                if (Integer.parseInt(array2[i]) != 0) {
+                    return -1;
+                }
+            }
+            i++;
+        }
+        return 0;
     }
 }
