@@ -308,7 +308,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
     private void OTAFinished(String action, String reason){
         resetSharedPreferences();
         stopRepeatingTask();
-        Utils.broadcastOTAFinished(getContext(), action, reason);
+        OTAFirmwareUpgrade.OTAFinished(mContext, action, reason);
     }
 
     private void programNextRow() {

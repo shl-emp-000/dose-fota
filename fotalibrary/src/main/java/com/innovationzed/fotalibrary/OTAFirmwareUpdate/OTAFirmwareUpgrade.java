@@ -34,6 +34,7 @@
 package com.innovationzed.fotalibrary.OTAFirmwareUpdate;
 
 import android.app.Service;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
@@ -63,13 +64,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+import static android.bluetooth.BluetoothDevice.ACTION_BOND_STATE_CHANGED;
+import static android.bluetooth.BluetoothDevice.BOND_BONDED;
+import static android.bluetooth.BluetoothDevice.BOND_BONDING;
+import static android.bluetooth.BluetoothDevice.BOND_NONE;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_OTA_FAIL;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_CONNECTED;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_DISCONNECTED;
 import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
 
 /**
- * OTA update fragment
+ * OTA update service
  */
 public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback {
     private final IBinder mBinder = new LocalBinder();
@@ -113,12 +118,32 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
 
     private OTAResponseReceiver_v1 mOTAResponseReceiverV1;
     private OTAResponseReceiver_v0 mOTAResponseReceiverV0;
+    private static boolean mIsBonded = false;
+    private static boolean mIsFotaInProgress = false;
 
     private BroadcastReceiver mGattOTAStatusReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             synchronized (this) {
-                processOTAStatus(intent);
+                if (intent.getAction().equals(ACTION_BOND_STATE_CHANGED)){
+                    if (mIsFotaInProgress){
+                        if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDING) {
+                            // Do nothing, waiting for bonding to complete
+                            mIsBonded = true;
+                        } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && !mIsBonded){
+                            BluetoothLeService.getRemoteDevice().createBond();
+                        } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDED && mIsBonded){
+                            boolean result = connectAndDiscoverServices();
+                            if(result){
+                                doFota();
+                            } else {
+                                OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not connect or discover services of device.");
+                            }
+                        }
+                    }
+                } else {
+                    processOTAStatus(intent);
+                }
             }
         }
     };
@@ -134,24 +159,29 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
 
     @Override
     public void onCreate() {
+        mIsFotaInProgress = true;
+        mIsBonded = false;
         mOTAResponseReceiverV1 = new OTAResponseReceiver_v1();
         mOTAResponseReceiverV0 = new OTAResponseReceiver_v0();
         BluetoothLeService.registerBroadcastReceiver(this, mGattOTAStatusReceiver, Utils.makeGattUpdateIntentFilter());
         BluetoothLeService.registerBroadcastReceiver(this, mOTAResponseReceiverV1, Utils.makeOTADataFilter());
         BluetoothLeService.registerBroadcastReceiver(this, mOTAResponseReceiverV0, Utils.makeOTADataFilterV0());
 
-        boolean result = connectAndDiscoverServices();
-        if(result){
-            doFota();
+        if(connect(this)){
+            if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
+                BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
+            } else {
+                BluetoothLeService.getRemoteDevice().createBond();
+            }
         } else {
-            OTAFinished(ACTION_OTA_FAIL, "Could not connect or discover services of device.");
+            OTAFinished(this, ACTION_OTA_FAIL, "Unable to connect to device");
         }
     }
 
     private void doFota(){
         OTAFirmwareUpgrade.mOtaCharacteristic = getGattData();
         if (OTAFirmwareUpgrade.mOtaCharacteristic == null){
-            OTAFinished(ACTION_OTA_FAIL, "getGattData() failed (OTAFirmwareUpgrade.mOtaCharacteristic is null)");
+            OTAFinished(this, ACTION_OTA_FAIL, "getGattData() failed (OTAFirmwareUpgrade.mOtaCharacteristic is null)");
         }
 
         boolean isCyacd2File = DOWNLOADED_FIRMWARE_DIR != null && isCyacd2File(DOWNLOADED_FIRMWARE_DIR);
@@ -161,7 +191,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         try {
             mOTAFUHandler.prepareFileWrite();
         } catch (Exception e) {
-            OTAFinished(ACTION_OTA_FAIL, "Invalid firmware file.");
+            OTAFinished(this, ACTION_OTA_FAIL, "Invalid firmware file.");
         }
     }
 
@@ -194,6 +224,11 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
 
     private boolean connectAndDiscoverServices(){
         boolean result = connect(this);
+        try{
+            Thread.sleep(500);
+        } catch (Exception e) {
+            OTAFinished(this, ACTION_OTA_FAIL, "Exception during Thread.sleep: " + e.getMessage());
+        }
         result &= BluetoothLeService.discoverServices();
 
         if (result) {
@@ -336,7 +371,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                 mGattServiceData.add(currentServiceData);
             }
         }
-        //mApplication.setGattServiceMasterData(mGattServiceMasterData);
     }
 
     @Override
@@ -458,8 +492,9 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         return file.matches(REGEX_MATCHES_CYACD2);
     }
 
-    private void OTAFinished(String action, String reason){
-        Utils.broadcastOTAFinished(this, action, reason);
+    public static void OTAFinished(Context context, String action, String reason){
+        mIsFotaInProgress = false;
+        Utils.broadcastOTAFinished(context, action, reason);
     }
 
 }

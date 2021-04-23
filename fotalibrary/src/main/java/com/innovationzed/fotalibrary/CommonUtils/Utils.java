@@ -90,7 +90,7 @@ public class Utils {
      */
     public static Dictionary getDeviceInformation(){
         Dictionary deviceInfo = new Hashtable();
-        deviceInfo.put("deviceSN", "12345");
+        deviceInfo.put("deviceSN", "1122");
         deviceInfo.put("firmwareVersion", "0.3.0");
         deviceInfo.put("batteryLevel", 75);
         return deviceInfo;
