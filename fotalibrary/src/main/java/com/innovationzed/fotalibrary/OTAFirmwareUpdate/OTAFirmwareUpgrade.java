@@ -43,6 +43,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 
 import androidx.annotation.Nullable;
@@ -120,6 +121,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     private OTAResponseReceiver_v0 mOTAResponseReceiverV0;
     private static boolean mIsBonded = false;
     private static boolean mIsFotaInProgress = false;
+    private static boolean mIsTimedOut = false;
 
     private BroadcastReceiver mGattOTAStatusReceiver = new BroadcastReceiver() {
         @Override
@@ -135,6 +137,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                         } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDED && mIsBonded){
                             boolean result = connectAndDiscoverServices();
                             if(result){
+                                mIsTimedOut = true;
                                 doFota();
                             } else {
                                 OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not connect or discover services of device.");
@@ -166,6 +169,15 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         BluetoothLeService.registerBroadcastReceiver(this, mGattOTAStatusReceiver, Utils.makeGattUpdateIntentFilter());
         BluetoothLeService.registerBroadcastReceiver(this, mOTAResponseReceiverV1, Utils.makeOTADataFilter());
         BluetoothLeService.registerBroadcastReceiver(this, mOTAResponseReceiverV0, Utils.makeOTADataFilterV0());
+
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!mIsTimedOut){
+                    OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Timeout/disconnect or user denied pairing request");
+                }
+            }
+        }, 60000);
 
         if(connect(this)){
             if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
@@ -494,6 +506,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
 
     public static void OTAFinished(Context context, String action, String reason){
         mIsFotaInProgress = false;
+        mIsTimedOut = false;
         Utils.broadcastOTAFinished(context, action, reason);
     }
 
