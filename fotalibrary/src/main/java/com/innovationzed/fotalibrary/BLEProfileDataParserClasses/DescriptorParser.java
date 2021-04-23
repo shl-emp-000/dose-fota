@@ -36,8 +36,8 @@ package com.innovationzed.fotalibrary.BLEProfileDataParserClasses;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.content.Context;
 
-import com.innovationzed.fotalibrary.R;
 import com.innovationzed.fotalibrary.CommonUtils.Constants;
+import com.innovationzed.fotalibrary.R;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;

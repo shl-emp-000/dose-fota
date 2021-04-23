@@ -177,16 +177,11 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         }
     }
 
-    @Override
-    public void showErrorDialogMessage(String errorMessage, final boolean stayOnPage) {
-    }
-
-
-    private boolean connectAndDiscoverServices(){
+    private static boolean connect(Context context){
         int state = STATE_DISCONNECTED;
         int n = 0;
-        while (n < 5 && state != STATE_CONNECTED){
-            BluetoothLeService.connect(FotaApi.macAddress, "BLE DFU Device", this);
+        while (n < 10 && state != STATE_CONNECTED){
+            BluetoothLeService.connect(FotaApi.macAddress, "BLE DFU Device", context);
             long timer = System.currentTimeMillis();
             n++;
             do {
@@ -194,15 +189,17 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
             } while (state != STATE_CONNECTED && System.currentTimeMillis() - timer < 2000);
         }
 
-        if (state != STATE_CONNECTED) {
-            return false;
-        }
+        return state == STATE_CONNECTED;
+    }
 
-        boolean result = BluetoothLeService.discoverServices();
+    private boolean connectAndDiscoverServices(){
+        boolean result = connect(this);
+        result &= BluetoothLeService.discoverServices();
+
         if (result) {
-            n = 0;
+            int n = 0;
             List<BluetoothGattService> supportedServices = BluetoothLeService.getSupportedGattServices();
-            while (n < 5 && supportedServices.size() == 0) {
+            while (n < 10 && supportedServices.size() == 0) {
                 supportedServices = BluetoothLeService.getSupportedGattServices();
                 n++;
                 try {
@@ -215,23 +212,17 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                 prepareData(supportedServices);
 
                 // Find the gatt service for ota update
-                HashMap<String, BluetoothGattService> otaItem = mGattServiceData.get(0);
                 for (HashMap<String, BluetoothGattService> item : mGattServiceData) {
                     BluetoothGattService gattService = item.get("UUID");
                     if (gattService.getUuid().equals(UUIDDatabase.UUID_OTA_UPDATE_SERVICE)) {
-                        otaItem = item;
+                        mService = item.get("UUID");
+                        OTAFirmwareUpgrade.mOtaService = mService;
+                        return true;
                     }
                 }
-                mService = otaItem.get("UUID");
-                OTAFirmwareUpgrade.mOtaService = mService;
-                return true;
-            } else {
-                return false;
             }
-        } else {
-            return false;
         }
-
+        return false;
     }
 
     /**
@@ -357,11 +348,12 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         BluetoothLeService.unregisterBroadcastReceiver(this, mOTAResponseReceiverV1);
         BluetoothLeService.unregisterBroadcastReceiver(this, mOTAResponseReceiverV0);
 
+        final String sharedPrefStatus = Utils.getStringSharedPreference(this, Constants.PREF_BOOTLOADER_STATE);
+        if (!sharedPrefStatus.equalsIgnoreCase("" + BootLoaderCommands_v0.EXIT_BOOTLOADER)) {
+            clearDataAndPreferences();
+        }
+
         if (OTAFirmwareUpgrade.mOtaCharacteristic != null) {
-            final String sharedPrefStatus = Utils.getStringSharedPreference(this, Constants.PREF_BOOTLOADER_STATE);
-            if (!sharedPrefStatus.equalsIgnoreCase("" + BootLoaderCommands_v0.EXIT_BOOTLOADER)) {
-                clearDataAndPreferences();
-            }
             stopBroadcastDataNotify(OTAFirmwareUpgrade.mOtaCharacteristic);
         }
         super.onDestroy();

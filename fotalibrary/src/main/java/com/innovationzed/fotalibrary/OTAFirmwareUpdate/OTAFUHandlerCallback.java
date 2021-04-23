@@ -35,13 +35,10 @@ package com.innovationzed.fotalibrary.OTAFirmwareUpdate;
 
 public interface OTAFUHandlerCallback {
 
-    public void showErrorDialogMessage(String errorMessage, final boolean stayOnPage);
-
     public boolean isSecondFileUpdateNeeded();
 
     public String saveAndReturnDeviceAddress();
 
     public void setFileUpgradeStarted(boolean status);
 
-//    public void generatePendingNotification(Context context);
 }

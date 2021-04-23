@@ -23,20 +23,14 @@ public class BackendApiRequest {
     private Retrofit mRetrofit;
     private IzFotaApi mIzFotaApi;
     private SimpleDateFormat mSdf;
-    private String mLatestFirmwareVersion;
-    private String mNewFirmwarePath;
     private Context mContext;
     private Callback<Void> mCallback;
     private Call<Void> mPostCall;
     private int mRetryCounter;
 
     public BackendApiRequest(Context context){
-
         mContext = context;
-
         mSdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-        mLatestFirmwareVersion = "";
-        mNewFirmwarePath = "";
 
         // Set up retrofit
         mRetrofit = RetrofitClient.getClient("https://iz-test-app.azurewebsites.net/api/");
@@ -44,7 +38,6 @@ public class BackendApiRequest {
     }
 
     public void getLatestFirmwareVersion(Callback<List<Firmware>> callback){
-
         Call<List<Firmware>> call = mIzFotaApi.getLatestFirmwareVersion(JWThandler.getAuthToken(mContext));
         call.enqueue(callback);
     }

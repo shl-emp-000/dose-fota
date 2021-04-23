@@ -67,7 +67,6 @@ import java.util.regex.Pattern;
 import okhttp3.ResponseBody;
 
 import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
-import static com.innovationzed.fotalibrary.FotaApi.ROOT_DIR;
 
 /**
  * Class for commonly used methods in the project

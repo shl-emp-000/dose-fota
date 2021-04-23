@@ -754,7 +754,6 @@ public class BluetoothLeService extends Service {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             return;
         }
-        //Logger.datalog(mContext.getResources().getString(R.string.dl_descriptor_read_request));
         mBluetoothGatt.readDescriptor(descriptor);
     }
 
@@ -779,7 +778,6 @@ public class BluetoothLeService extends Service {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             return;
         }
-        String characteristicValue = Utils.byteArrayToHex(value);
 
         final int mtuValue;
         if (MTU_USE_NEGOTIATED) {
@@ -845,7 +843,6 @@ public class BluetoothLeService extends Service {
             return;
         }
 
-        String characteristicValue = Utils.byteArrayToHex(value);
         characteristic.setValue(value);
         int counter = 20;
         boolean status;
@@ -872,8 +869,6 @@ public class BluetoothLeService extends Service {
      */
     public static void writeCharacteristicGattDb(
             BluetoothGattCharacteristic characteristic, byte[] byteArray) {
-
-        String characteristicValue = Utils.byteArrayToHex(byteArray);
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             return;
         } else {
@@ -922,7 +917,6 @@ public class BluetoothLeService extends Service {
             valueByte[2] = (byte) blue;
             valueByte[3] = (byte) intensity;
             characteristic.setValue(valueByte);
-            String characteristicValue = Utils.byteArrayToHex(valueByte);
             mBluetoothGatt.writeCharacteristic(characteristic);
         }
     }

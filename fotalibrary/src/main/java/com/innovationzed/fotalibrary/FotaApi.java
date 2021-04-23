@@ -33,7 +33,8 @@ public class FotaApi {
     public static final String ROOT_DIR = "/storage/emulated/0/Download";
 
     private Context mContext;
-    private Intent mIntent;
+    private Intent mOTAServiceIntent;
+    private Intent mBluetoothLeServiceIntent;
     private static Dictionary mDeviceInformation;
     private BackendApiRequest mBackend;
 
@@ -45,6 +46,7 @@ public class FotaApi {
             synchronized (this) {
                 final String action = intent.getAction();
                 if (action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) || action.equals(BluetoothLeService.ACTION_OTA_FAIL)){
+                    mUpdatePossible = false;
                     Utils.deleteFirmwareFile();
 
                     Boolean success = action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) ? true : false;
@@ -55,7 +57,8 @@ public class FotaApi {
                         reason = bundle.getString(OTA_REASON);
                     }
                     mBackend.postFotaResult(success, reason);
-                    mContext.stopService(mIntent);
+                    mContext.stopService(mOTAServiceIntent);
+                    mContext.stopService(mBluetoothLeServiceIntent);
                 }
             }
         }
@@ -70,7 +73,8 @@ public class FotaApi {
         this.macAddress = macAddress;
 
         mContext = context;
-        mIntent = new Intent(mContext, OTAFirmwareUpgrade.class);
+        mOTAServiceIntent = new Intent(mContext, OTAFirmwareUpgrade.class);
+        mBluetoothLeServiceIntent = new Intent(mContext, BluetoothLeService.class);
         mBackend = new BackendApiRequest(context);
 
         // Register receiver
@@ -94,7 +98,11 @@ public class FotaApi {
      * - BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE
      */
     public void isFirmwareUpdatePossible(){
-        checkFirmwareUpdatePossible();
+        if (!mUpdatePossible){
+            checkFirmwareUpdatePossible();
+        } else {
+            broadcast(BluetoothLeService.ACTION_OTA_IS_POSSIBLE);
+        }
     }
 
     /**
@@ -109,7 +117,8 @@ public class FotaApi {
      */
     public void doFirmwareUpdate(boolean userConfirmation){
         if (userConfirmation && mUpdatePossible){
-            mContext.startService(mIntent);
+            mContext.startService(mBluetoothLeServiceIntent);
+            mContext.startService(mOTAServiceIntent);
         }
         else {
             Utils.deleteFirmwareFile();

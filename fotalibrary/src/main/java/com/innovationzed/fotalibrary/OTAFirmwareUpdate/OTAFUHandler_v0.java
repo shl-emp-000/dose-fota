@@ -116,12 +116,12 @@ public class OTAFUHandler_v0 extends OTAFUHandlerBase implements FileReadStatusU
                             /*
                             Catches invalid files
                              */
-                            showErrorDialogMessage("getResources().getString(R.string.ota_alert_invalid_file)", true);
+//                            showErrorDialogMessage("getResources().getString(R.string.ota_alert_invalid_file)", true);
                         } catch (NullPointerException e) {
                             /*
                             Catches invalid files
                              */
-                            showErrorDialogMessage("getResources().getString(R.string.ota_alert_invalid_file)", true);
+//                            showErrorDialogMessage("getResources().getString(R.string.ota_alert_invalid_file)", true);
                         }
                     }
                 }
@@ -130,12 +130,12 @@ public class OTAFUHandler_v0 extends OTAFUHandlerBase implements FileReadStatusU
             /*
             Catches invalid files
              */
-            showErrorDialogMessage("getResources().getString(R.string.ota_alert_invalid_file)", true);
+//            showErrorDialogMessage("getResources().getString(R.string.ota_alert_invalid_file)", true);
         } catch (NullPointerException e) {
             /*
             Catches invalid files
              */
-            showErrorDialogMessage("getResources().getString(R.string.ota_alert_invalid_file)", true);
+//            showErrorDialogMessage("getResources().getString(R.string.ota_alert_invalid_file)", true);
         }
     }
 
@@ -184,7 +184,7 @@ public class OTAFUHandler_v0 extends OTAFUHandlerBase implements FileReadStatusU
                     /**
                      * Wrong Silicon ID and SiliconRev
                      */
-                    showErrorDialogMessage("getContext().getResources().getString(R.string.alert_message_silicon_id_mismatch_error)", true);
+//                    showErrorDialogMessage("getContext().getResources().getString(R.string.alert_message_silicon_id_mismatch_error)", true);
                 }
             }
         } else if (status.equalsIgnoreCase("" + BootLoaderCommands_v0.GET_APP_STATUS)) {
@@ -198,7 +198,7 @@ public class OTAFUHandler_v0 extends OTAFUHandlerBase implements FileReadStatusU
                         /**
                          * Cannot re-program active application
                          */
-                        showErrorDialogMessage("getContext().getResources().getString(R.string.alert_programming_of_active_app_is_not_allowed)", true);
+//                        showErrorDialogMessage("getContext().getResources().getString(R.string.alert_programming_of_active_app_is_not_allowed)", true);
                     } else {
                         sendGetFlashSizeCmd();
                     }
@@ -209,7 +209,7 @@ public class OTAFUHandler_v0 extends OTAFUHandlerBase implements FileReadStatusU
                     int appValid = extras.getInt(Constants.EXTRA_APP_VALID);
                     boolean isAppValid = appValid > 0;
                     if (isAppValid) { // It looks strange but it is so. The same logic is used by CySmart PC Tool.
-                        showErrorDialogMessage("getContext().getResources().getString(R.string.alert_invalid_active_app_programmed)", true);
+//                        showErrorDialogMessage("getContext().getResources().getString(R.string.alert_invalid_active_app_programmed)", true);
                     } else {
                         sendSetActiveAppCmd();
                     }
@@ -294,7 +294,7 @@ public class OTAFUHandler_v0 extends OTAFUHandlerBase implements FileReadStatusU
                             }
                         }
                     } else {
-                        showErrorDialogMessage("getContext().getResources().getString(R.string.alert_message_checksum_error)", false);
+//                        showErrorDialogMessage("getContext().getResources().getString(R.string.alert_message_checksum_error)", false);
                     }
                 }
             }
@@ -339,7 +339,7 @@ public class OTAFUHandler_v0 extends OTAFUHandlerBase implements FileReadStatusU
 
         if (extras.containsKey(Constants.EXTRA_ERROR_OTA)) {
             String errorMessage = extras.getString(Constants.EXTRA_ERROR_OTA);
-            showErrorDialogMessage("getContext().getResources().getString(R.string.alert_message_ota_error) + errorMessage", false);
+//            showErrorDialogMessage("getContext().getResources().getString(R.string.alert_message_ota_error) + errorMessage", false);
         }
     }
 
@@ -449,7 +449,7 @@ public class OTAFUHandler_v0 extends OTAFUHandlerBase implements FileReadStatusU
 //                    mProgressText.setText("getContext().getResources().getText(R.string.ota_program_row)");
                 }
             } else {
-                showErrorDialogMessage("getContext().getResources().getString(R.string.alert_message_row_out_of_bounds_error)", true);
+//                showErrorDialogMessage("getContext().getResources().getString(R.string.alert_message_row_out_of_bounds_error)", true);
             }
         }
     }

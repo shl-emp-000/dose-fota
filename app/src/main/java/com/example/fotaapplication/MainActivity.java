@@ -61,9 +61,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         checkLocationPermission();
         checkStoragePermission();
 
-        Intent gattServiceIntent = new Intent(getApplicationContext(), BluetoothLeService.class);
-        startService(gattServiceIntent);
-
         // Register receiver
         BluetoothLeService.registerBroadcastReceiver(this, mOTAStatusReceiver, Utils.makeOTAIntentFilter());
 

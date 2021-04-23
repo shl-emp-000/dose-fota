@@ -35,34 +35,26 @@ package com.innovationzed.fotalibrary.OTAFirmwareUpdate;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.content.Context;
-import android.content.Intent;
-import android.content.res.Resources;
 
 
 public abstract class OTAFUHandlerBase implements OTAFUHandler {
 
-//    protected final Fragment mFragment;
-//    protected final View mView;
-//    protected final TextView mProgressText;
     protected static Context mContext;
 
     protected final BluetoothGattCharacteristic mOtaCharacteristic;
     protected final String mFilepath;
     private final OTAFUHandlerCallback mParent;
     protected boolean mPrepareFileWriteEnabled = true;
-    protected int mProgressBarPosition;
     protected byte mActiveApp; //Dual-App Bootloader Active Application ID
     protected long mSecurityKey;
 
     public OTAFUHandlerBase(Context context, BluetoothGattCharacteristic otaCharacteristic, byte activeApp, long securityKey, String filepath, OTAFUHandlerCallback parent) {
         this.mContext = context;
-//        this.mView = view;
         this.mOtaCharacteristic = otaCharacteristic;
         this.mActiveApp = activeApp;
         this.mSecurityKey = securityKey;
         this.mFilepath = filepath;
         this.mParent = parent;
-//        mProgressText = (TextView) mView.findViewById(R.id.file_status);
     }
 
     @Override
@@ -72,18 +64,6 @@ public abstract class OTAFUHandlerBase implements OTAFUHandler {
 
     protected Context getContext() {
         return mContext;
-    }
-
-    protected Resources getResources() {
-        return null;//mActivity.getResources();
-    }
-
-    protected void startActivity(Intent intent) {
-        mContext.startActivity(intent);
-    }
-
-    protected void showErrorDialogMessage(String errorMessage, final boolean stayOnPage) {
-        mParent.showErrorDialogMessage(errorMessage, stayOnPage);
     }
 
     protected boolean isSecondFileUpdateNeeded() {
