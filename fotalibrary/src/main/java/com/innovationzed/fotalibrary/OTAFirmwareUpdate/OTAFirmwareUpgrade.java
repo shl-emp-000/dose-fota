@@ -121,7 +121,10 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     private OTAResponseReceiver_v0 mOTAResponseReceiverV0;
     private static boolean mIsBonded = false;
     private static boolean mIsFotaInProgress = false;
-    private static boolean mIsTimedOut = false;
+    private static boolean mHasPairedSuccessfully = false;
+
+    private static Handler mTimeoutHandler;
+    private static Runnable mTimeoutRunnable;
 
     private BroadcastReceiver mGattOTAStatusReceiver = new BroadcastReceiver() {
         @Override
@@ -134,10 +137,12 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                             mIsBonded = true;
                         } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && !mIsBonded){
                             BluetoothLeService.getRemoteDevice().createBond();
+                        } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && mIsBonded){
+                            OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "User did not approve pairing request");
                         } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDED && mIsBonded){
                             boolean result = connectAndDiscoverServices();
                             if(result){
-                                mIsTimedOut = true;
+                                mHasPairedSuccessfully = true;
                                 doFota();
                             } else {
                                 OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not connect or discover services of device.");
@@ -170,14 +175,16 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         BluetoothLeService.registerBroadcastReceiver(this, mOTAResponseReceiverV1, Utils.makeOTADataFilter());
         BluetoothLeService.registerBroadcastReceiver(this, mOTAResponseReceiverV0, Utils.makeOTADataFilterV0());
 
-        new Handler().postDelayed(new Runnable() {
+        mTimeoutHandler = new Handler();
+        mTimeoutRunnable = new Runnable(){
             @Override
             public void run() {
-                if (!mIsTimedOut){
-                    OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Timeout/disconnect or user denied pairing request");
+                if (!mHasPairedSuccessfully){
+                    OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Timeout/disconnect");
                 }
             }
-        }, 60000);
+        };
+        mTimeoutHandler.postDelayed(mTimeoutRunnable, 60000);
 
         if(connect(this)){
             if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
@@ -506,7 +513,8 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
 
     public static void OTAFinished(Context context, String action, String reason){
         mIsFotaInProgress = false;
-        mIsTimedOut = false;
+        mHasPairedSuccessfully = false;
+        mTimeoutHandler.removeCallbacks(mTimeoutRunnable);
         Utils.broadcastOTAFinished(context, action, reason);
     }
 
