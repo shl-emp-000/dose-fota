@@ -34,14 +34,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         public void onReceive(Context context, Intent intent) {
             synchronized (this) {
                 final String action = intent.getAction();
-                if (action.equals(BluetoothLeService.ACTION_OTA_SUCCESS)){
+                if (action.equals(FotaApi.ACTION_FOTA_SUCCESS)){
                     setTextInformation("Firmware update is finished.");
-                } else if (action.equals(BluetoothLeService.ACTION_OTA_FAIL)){
+                } else if (action.equals(FotaApi.ACTION_FOTA_FAIL)){
                     setTextInformation("Firmware update failed.");
-                } else if (action.equals(BluetoothLeService.ACTION_OTA_IS_POSSIBLE)){
+                } else if (action.equals(FotaApi.ACTION_FOTA_POSSIBLE)){
                     mFirmwareUpdatePossible = true;
                     setTextInformation("Firmware update is possible.");
-                } else if (action.equals(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE)){
+                } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE)){
                     setTextInformation("Firmware update is not possible.");
                 }
             }

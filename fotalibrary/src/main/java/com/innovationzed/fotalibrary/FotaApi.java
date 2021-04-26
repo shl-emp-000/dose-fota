@@ -31,6 +31,10 @@ public class FotaApi {
     public static String latestFirmwareVersion;
     public static String DOWNLOADED_FIRMWARE_DIR;
     public static final String ROOT_DIR = "/storage/emulated/0/Download";
+    public static final String ACTION_FOTA_POSSIBLE = BluetoothLeService.ACTION_OTA_IS_POSSIBLE;
+    public static final String ACTION_FOTA_NOT_POSSIBLE = BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE;
+    public static final String ACTION_FOTA_SUCCESS = BluetoothLeService.ACTION_OTA_SUCCESS;
+    public static final String ACTION_FOTA_FAIL = BluetoothLeService.ACTION_OTA_FAIL;
 
     private Context mContext;
     private Intent mOTAServiceIntent;
