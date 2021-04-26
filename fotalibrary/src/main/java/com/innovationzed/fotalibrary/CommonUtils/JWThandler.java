@@ -23,7 +23,6 @@ public final class JWThandler {
         if (mAuthToken.isEmpty() || isAuthTokenExpired(current)) {
             buildNewAuthToken(current);
         }
-
         return mAuthToken;
     }
 
@@ -34,6 +33,7 @@ public final class JWThandler {
         header.setType("JWT"); // Works without setting the type
         Date expTime = new Date();
         expTime.setTime(System.currentTimeMillis()+(60*60*1000)); // Token valid for 1h, TODO: change it for shorter?
+        // TODO Update claim user_id with device id
         mJwtString = Jwts.builder().setHeader((Map<String, Object>) header).setId(UUID.randomUUID().toString()).setExpiration(expTime).claim("token_type", "access").claim("user_id", "1122").signWith(Keys.hmacShaKeyFor(current.getString(R.string.api_secret_key).getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256).compact();
         mAuthToken = "Bearer " + mJwtString;
         Log.d("authToken", mAuthToken);
