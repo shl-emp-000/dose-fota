@@ -1,20 +1,13 @@
 # Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+The application app is an example 3rd party app that has three buttons to demonstrate the functionality of the library. This has not been tested with real hardware.
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+# 3rd party example app
+The example app consists of only one java file, MainActivity.java and a very simple GUI with three buttons. All the functions that are needed for FOTA are located in FotaApi.java. An instance of this class needs to be created and the current context + MAC address to the device should be passed as parameters.
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+Buttons:
+1. "Check if firmware update is possible": This button calls the function isFirmwareUpdatepossible in FotaApi.java which performs some checks to make sure it's possible to update the firmware at this point. This function should be called before asking the user if they want to update. When the checks are done an action will be broadcasted, FotaApi.ACTION_FOTA_POSSIBLE or FotaApi.ACTION_FOTA_NOT_POSSIBLE. The example app contains an example of a receiver that listens to those actions.
+2. "Confirm that user wants to update": This button confirms that the user wants to perform the update (this confirmation can be done in any way the 3rd party app prefers).
+3. "Do firmware update": this button calls doFirmwareUpdate(boolean userConfirmation) in FotaApi.java. The device needs to be in boot mode before calling this function and that is achieved by using the reset buttons on the eval board. If userConfirmation is true and it has been checked that FOTA is possible, it starts the FOTA process. During this process it needs to pair with the device in boot mode to be able to discover the OTA bluetooth service. For newer Android versions (>= 10) the system might show a user dialog asking the user to confirm that they want to pair with the device, if that happens press pair/accept. When the FOTA process is done an action will be broadcasted, either FotaApi.ACTION_FOTA_SUCCESS or FotaApi.ACTION_FOTA_FAIL. The example app contains an example of a receiver that listens to those actions.
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
-
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+# Tools
+Android Studio 4.1 is used to build and run the example app and the library.
