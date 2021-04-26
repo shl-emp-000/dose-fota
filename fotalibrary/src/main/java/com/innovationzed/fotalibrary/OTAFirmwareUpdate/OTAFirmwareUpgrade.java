@@ -138,7 +138,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                         } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && !mIsBonded){
                             BluetoothLeService.getRemoteDevice().createBond();
                         } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && mIsBonded){
-                            OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "User did not approve pairing request");
+                            OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not pair with device. Possible reasons: user did not approve pairing request or device was not in boot mode.");
                         } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDED && mIsBonded){
                             boolean result = connectAndDiscoverServices();
                             if(result){
