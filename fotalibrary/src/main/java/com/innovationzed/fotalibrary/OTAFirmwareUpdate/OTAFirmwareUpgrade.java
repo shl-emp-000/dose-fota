@@ -36,7 +36,6 @@ package com.innovationzed.fotalibrary.OTAFirmwareUpdate;
 import android.app.Service;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -60,18 +59,21 @@ import java.io.StringWriter;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
 
 import static android.bluetooth.BluetoothDevice.ACTION_BOND_STATE_CHANGED;
 import static android.bluetooth.BluetoothDevice.BOND_BONDED;
 import static android.bluetooth.BluetoothDevice.BOND_BONDING;
 import static android.bluetooth.BluetoothDevice.BOND_NONE;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_CONNECTED;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_CONNECTING;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_DISCONNECTED;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_DISCONNECTING;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_OTA_FAIL;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_CONNECTED;
-import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_DISCONNECTED;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.getBluetoothDeviceAddress;
 import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
 
 /**
@@ -85,17 +87,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     public static final String REGEX_MATCHES_CYACD2 = "(?i).*\\.cyacd2$";
     public static final String REGEX_ENDS_WITH_CYACD_OR_CYACD2 = "(?i)\\.cyacd2?$";
     public static boolean mFileUpgradeStarted = false;
-
-    // UUID key
-    private static final String LIST_UUID = "UUID";
-
-    static ArrayList<HashMap<String, BluetoothGattService>> mGattServiceData = new ArrayList<>();
-    static ArrayList<HashMap<String, BluetoothGattService>> mGattServiceFindMeData = new ArrayList<>();
-    static ArrayList<HashMap<String, BluetoothGattService>> mGattServiceProximityData = new ArrayList<HashMap<String, BluetoothGattService>>();
-    private static ArrayList<HashMap<String, BluetoothGattService>> mGattDbServiceData = new ArrayList<HashMap<String, BluetoothGattService>>();
-    private static ArrayList<HashMap<String, BluetoothGattService>> mGattServiceMasterData = new ArrayList<>();
-
-    private static BluetoothGattService mService;
 
     private static OTAFUHandler DUMMY_HANDLER = (OTAFUHandler) Proxy.newProxyInstance(OTAFirmwareUpgrade.class.getClassLoader(), new Class<?>[]{OTAFUHandler.class}, new InvocationHandler() {
         @Override
@@ -117,11 +108,14 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
 
     private OTAFUHandler mOTAFUHandler = DUMMY_HANDLER;//Initializing to DUMMY_HANDLER to avoid NPEs
 
+    private Context mContext;
+
     private OTAResponseReceiver_v1 mOTAResponseReceiverV1;
     private OTAResponseReceiver_v0 mOTAResponseReceiverV0;
     private static boolean mIsBonded = false;
     private static boolean mIsFotaInProgress = false;
     private static boolean mHasPairedSuccessfully = false;
+    private static boolean mServiceDiscoveryStarted = false;
 
     private static Handler mTimeoutHandler;
     private static Runnable mTimeoutRunnable;
@@ -131,24 +125,45 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         public void onReceive(Context context, Intent intent) {
             synchronized (this) {
                 if (intent.getAction().equals(ACTION_BOND_STATE_CHANGED)){
-                    if (mIsFotaInProgress){
-                        if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDING) {
-                            // Do nothing, waiting for bonding to complete
-                            mIsBonded = true;
-                        } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && !mIsBonded){
-                            BluetoothLeService.getRemoteDevice().createBond();
-                        } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && mIsBonded){
-                            OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not pair with device. Possible reasons: user did not approve pairing request or device was not in boot mode.");
-                        } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDED && mIsBonded){
-                            boolean result = connectAndDiscoverServices();
-                            if(result){
-                                mHasPairedSuccessfully = true;
-                                doFota();
-                            } else {
-                                OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not connect or discover services of device.");
-                            }
+                    if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDING) {
+                        // Do nothing, waiting for bonding to complete
+                        mIsBonded = true;
+                    } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && !mIsBonded){
+                        BluetoothLeService.getRemoteDevice().createBond();
+                    } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && mIsBonded){
+                        OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not pair with device. Possible reasons: user did not approve pairing request or device was not in boot mode.");
+                    } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDED && mIsBonded){
+                        mHasPairedSuccessfully = true;
+                        if (BluetoothLeService.getConnectionState() == STATE_CONNECTED && !mServiceDiscoveryStarted) {
+                            mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
+                        } else { // if it is paired but not currently connected
+                            BluetoothLeService.connect(FotaApi.macAddress, context);
                         }
                     }
+                } else if (intent.getAction().equals(ACTION_GATT_CONNECTED)) {
+                    if (mHasPairedSuccessfully && !mServiceDiscoveryStarted) {
+                        // if it is paired and connected we should discover services
+                        mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
+                    } else {
+                        // this is where it goes after initial connect
+                        if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
+                            BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
+                        } else {
+                            BluetoothLeService.getRemoteDevice().createBond();
+                        }
+                    }
+                } else if (intent.getAction().equals(ACTION_GATT_CONNECTING)) {
+                    // wait for connection...
+                } else if (intent.getAction().equals(ACTION_GATT_DISCONNECTING)) {
+                    // wait for disconnection...
+                } else if (intent.getAction().equals(ACTION_GATT_DISCONNECTED)) {
+                    // do nothing for now, it can get disconnected when re-pairing
+                } else if (intent.getAction().equals(ACTION_GATT_SERVICES_DISCOVERED )&& !mIsFotaInProgress) {
+                    // services has been discovered and it has been paired, start fota process
+                    mIsFotaInProgress = true;
+                    doFota();
+                } else if (intent.getAction().equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL) && mHasPairedSuccessfully) {
+                        OTAFinished(mContext, ACTION_OTA_FAIL, "Service discovery unsuccessful");
                 } else {
                     processOTAStatus(intent);
                 }
@@ -167,7 +182,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
 
     @Override
     public void onCreate() {
-        mIsFotaInProgress = true;
+        mContext = this;
         mIsBonded = false;
         mOTAResponseReceiverV1 = new OTAResponseReceiver_v1();
         mOTAResponseReceiverV0 = new OTAResponseReceiver_v0();
@@ -179,39 +194,39 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         mTimeoutRunnable = new Runnable(){
             @Override
             public void run() {
-                if (!mHasPairedSuccessfully){
+                if (!mIsFotaInProgress){
                     OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Timeout/disconnect");
                 }
             }
         };
         mTimeoutHandler.postDelayed(mTimeoutRunnable, 60000);
 
-        if(connect(this)){
-            if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
-                BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
-            } else {
-                BluetoothLeService.getRemoteDevice().createBond();
-            }
-        } else {
-            OTAFinished(this, ACTION_OTA_FAIL, "Unable to connect to device");
+        if (!BluetoothLeService.connect(FotaApi.macAddress, this)){
+            OTAFinished(this, ACTION_OTA_FAIL, "Initial connection to device failed");
         }
     }
 
     private void doFota(){
-        OTAFirmwareUpgrade.mOtaCharacteristic = getGattData();
-        if (OTAFirmwareUpgrade.mOtaCharacteristic == null){
-            OTAFinished(this, ACTION_OTA_FAIL, "getGattData() failed (OTAFirmwareUpgrade.mOtaCharacteristic is null)");
+        mOtaService = BluetoothLeService.getService(UUIDDatabase.UUID_OTA_UPDATE_SERVICE);
+        if(mOtaService != null){
+            OTAFirmwareUpgrade.mOtaCharacteristic = getGattData();
+            if (OTAFirmwareUpgrade.mOtaCharacteristic == null){
+                OTAFinished(this, ACTION_OTA_FAIL, "getGattData() failed (OTAFirmwareUpgrade.mOtaCharacteristic is null)");
+            }
+
+            boolean isCyacd2File = DOWNLOADED_FIRMWARE_DIR != null && isCyacd2File(DOWNLOADED_FIRMWARE_DIR);
+            Utils.setBooleanSharedPreference(this, Constants.PREF_IS_CYACD2_FILE, isCyacd2File);
+            mOTAFUHandler = new OTAFUHandler_v1(this, OTAFirmwareUpgrade.mOtaCharacteristic, DOWNLOADED_FIRMWARE_DIR, this);
+
+            try {
+                mOTAFUHandler.prepareFileWrite();
+            } catch (Exception e) {
+                OTAFinished(this, ACTION_OTA_FAIL, "Invalid firmware file.");
+            }
+        } else {
+            OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not find OTA service.");
         }
 
-        boolean isCyacd2File = DOWNLOADED_FIRMWARE_DIR != null && isCyacd2File(DOWNLOADED_FIRMWARE_DIR);
-        Utils.setBooleanSharedPreference(this, Constants.PREF_IS_CYACD2_FILE, isCyacd2File);
-        mOTAFUHandler = new OTAFUHandler_v1(this, OTAFirmwareUpgrade.mOtaCharacteristic, DOWNLOADED_FIRMWARE_DIR, this);
-
-        try {
-            mOTAFUHandler.prepareFileWrite();
-        } catch (Exception e) {
-            OTAFinished(this, ACTION_OTA_FAIL, "Invalid firmware file.");
-        }
     }
 
     private void processOTAStatus(Intent intent) {
@@ -223,172 +238,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         Bundle extras = intent.getExtras();
         if (action.equals(BluetoothLeService.ACTION_OTA_STATUS) || action.equals(BluetoothLeService.ACTION_OTA_STATUS_V1)) {
             mOTAFUHandler.processOTAStatus(bootloaderState, extras);
-        }
-    }
-
-    private static boolean connect(Context context){
-        int state = STATE_DISCONNECTED;
-        int n = 0;
-        while (n < 10 && state != STATE_CONNECTED){
-            BluetoothLeService.connect(FotaApi.macAddress, "BLE DFU Device", context);
-            long timer = System.currentTimeMillis();
-            n++;
-            do {
-                state = BluetoothLeService.getConnectionState();
-            } while (state != STATE_CONNECTED && System.currentTimeMillis() - timer < 2000);
-        }
-
-        return state == STATE_CONNECTED;
-    }
-
-    private boolean connectAndDiscoverServices(){
-        boolean result = connect(this);
-        try{
-            Thread.sleep(500);
-        } catch (Exception e) {
-            OTAFinished(this, ACTION_OTA_FAIL, "Exception during Thread.sleep: " + e.getMessage());
-        }
-        result &= BluetoothLeService.discoverServices();
-
-        if (result) {
-            int n = 0;
-            List<BluetoothGattService> supportedServices = BluetoothLeService.getSupportedGattServices();
-            while (n < 10 && supportedServices.size() == 0) {
-                supportedServices = BluetoothLeService.getSupportedGattServices();
-                n++;
-                try {
-                    Thread.sleep(2000);
-                } catch (Exception e){
-                    return false;
-                }
-            }
-            if (supportedServices.size() > 0) {
-                prepareData(supportedServices);
-
-                // Find the gatt service for ota update
-                for (HashMap<String, BluetoothGattService> item : mGattServiceData) {
-                    BluetoothGattService gattService = item.get("UUID");
-                    if (gattService.getUuid().equals(UUIDDatabase.UUID_OTA_UPDATE_SERVICE)) {
-                        mService = item.get("UUID");
-                        OTAFirmwareUpgrade.mOtaService = mService;
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Prepare GATTServices data.
-     *
-     * @param gattServices
-     */
-    private void prepareData(List<BluetoothGattService> gattServices) {
-        boolean mFindMeSet = false;
-        boolean mProximitySet = false;
-        boolean mGattSet = false;
-        if (gattServices == null)
-            return;
-        // Clear all array list before entering values.
-        mGattServiceData.clear();
-        mGattServiceFindMeData.clear();
-        mGattServiceMasterData.clear();
-
-        // Loops through available GATT Services.
-        for (BluetoothGattService gattService : gattServices) {
-            HashMap<String, BluetoothGattService> currentServiceData = new HashMap<String, BluetoothGattService>();
-            UUID uuid = gattService.getUuid();
-            // Optimization code for FindMe Profile
-            if (uuid.equals(UUIDDatabase.UUID_IMMEDIATE_ALERT_SERVICE)) {
-                currentServiceData.put(LIST_UUID, gattService);
-                mGattServiceMasterData.add(currentServiceData);
-                if (!mGattServiceFindMeData.contains(currentServiceData)) {
-                    mGattServiceFindMeData.add(currentServiceData);
-                }
-                if (!mFindMeSet) {
-                    mFindMeSet = true;
-                    mGattServiceData.add(currentServiceData);
-                }
-            }
-            // Optimization code for Proximity Profile
-            else if (uuid.equals(UUIDDatabase.UUID_LINK_LOSS_SERVICE)
-                    || uuid.equals(UUIDDatabase.UUID_TRANSMISSION_POWER_SERVICE)) {
-                currentServiceData.put(LIST_UUID, gattService);
-                mGattServiceMasterData.add(currentServiceData);
-                if (!mGattServiceProximityData.contains(currentServiceData)) {
-                    mGattServiceProximityData.add(currentServiceData);
-                }
-                if (!mProximitySet) {
-                    mProximitySet = true;
-                    mGattServiceData.add(currentServiceData);
-                }
-            }// Optimization code for GATTDB
-            else if (uuid.equals(UUIDDatabase.UUID_GENERIC_ACCESS_SERVICE)
-                    || uuid.equals(UUIDDatabase.UUID_GENERIC_ATTRIBUTE_SERVICE)) {
-                currentServiceData.put(LIST_UUID, gattService);
-                mGattDbServiceData.add(currentServiceData);
-                if (!mGattSet) {
-                    mGattSet = true;
-                    mGattServiceData.add(currentServiceData);
-                }
-            } //Optimization code for HID
-            else if (uuid.equals(UUIDDatabase.UUID_HID_SERVICE)) {
-                /**
-                 * Special handling for KITKAT devices
-                 */
-                if (android.os.Build.VERSION.SDK_INT < 21) {
-                    List<BluetoothGattCharacteristic> allCharacteristics = gattService.getCharacteristics();
-                    List<BluetoothGattCharacteristic> RDKCharacteristics = new ArrayList<BluetoothGattCharacteristic>();
-                    List<BluetoothGattDescriptor> RDKDescriptors = new ArrayList<BluetoothGattDescriptor>();
-
-                    //Find all Report characteristics
-                    for (BluetoothGattCharacteristic characteristic : allCharacteristics) {
-                        if (characteristic.getUuid().equals(UUIDDatabase.UUID_REPORT)) {
-                            RDKCharacteristics.add(characteristic);
-                        }
-                    }
-
-                    //Find all Report descriptors
-                    for (BluetoothGattCharacteristic rdkcharacteristic : RDKCharacteristics) {
-                        List<BluetoothGattDescriptor> descriptors = rdkcharacteristic.
-                                getDescriptors();
-                        for (BluetoothGattDescriptor descriptor : descriptors) {
-                            RDKDescriptors.add(descriptor);
-                        }
-                    }
-                    /**
-                     * Wait for all  descriptors to receive
-                     */
-                    if (RDKDescriptors.size() == RDKCharacteristics.size() * 2) {
-
-                        for (int pos = 0, descPos = 0; descPos < RDKCharacteristics.size(); pos++, descPos++) {
-                            BluetoothGattCharacteristic rdkCharacteristic = RDKCharacteristics.get(descPos);
-                            //Mapping the characteristic and descriptors
-                            BluetoothGattDescriptor clientdescriptor = RDKDescriptors.get(pos);
-                            BluetoothGattDescriptor reportdescriptor = RDKDescriptors.get(pos + 1);
-                            if (!rdkCharacteristic.getDescriptors().contains(clientdescriptor)) {
-                                rdkCharacteristic.addDescriptor(clientdescriptor);
-                            }
-                            if (!rdkCharacteristic.getDescriptors().contains(reportdescriptor)) {
-                                rdkCharacteristic.addDescriptor(reportdescriptor);
-                            }
-                            pos++;
-                        }
-                    }
-                    currentServiceData.put(LIST_UUID, gattService);
-                    mGattServiceMasterData.add(currentServiceData);
-                    mGattServiceData.add(currentServiceData);
-                } else {
-                    currentServiceData.put(LIST_UUID, gattService);
-                    mGattServiceMasterData.add(currentServiceData);
-                    mGattServiceData.add(currentServiceData);
-                }
-            } else {
-                currentServiceData.put(LIST_UUID, gattService);
-                mGattServiceMasterData.add(currentServiceData);
-                mGattServiceData.add(currentServiceData);
-            }
         }
     }
 
@@ -514,6 +363,8 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     public static void OTAFinished(Context context, String action, String reason){
         mIsFotaInProgress = false;
         mHasPairedSuccessfully = false;
+        mServiceDiscoveryStarted = false;
+        mIsBonded = false;
         mTimeoutHandler.removeCallbacks(mTimeoutRunnable);
         Utils.broadcastOTAFinished(context, action, reason);
     }

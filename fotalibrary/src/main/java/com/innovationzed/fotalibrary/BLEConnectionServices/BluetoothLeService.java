@@ -47,7 +47,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.Resources;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
@@ -176,6 +175,11 @@ public class BluetoothLeService extends Service {
     private static final Handler mHandler = new Handler(Looper.getMainLooper());
 
     /**
+     * UUID key
+     */
+    private static final String LIST_UUID = "UUID";
+
+    /**
      * Implements callback methods for GATT events that the app cares about. For
      * example,connection change and services discovered.
      */
@@ -252,7 +256,6 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (descriptor.getValue() != null) {
                     addRemoveData(descriptor);
@@ -266,11 +269,6 @@ public class BluetoothLeService extends Service {
                     if (mRDKCharacteristics.size() > 0) {
                         mRDKCharacteristics.remove(0);
                         enableAllRDKCharacteristics();
-                    }
-                } else if (mEnableGlucoseCharacteristicsFlag) {
-                    if (mGlucoseCharacteristics.size() > 0) {
-                        mGlucoseCharacteristics.remove(0);
-                        //enableAllGlucoseCharacteristics();
                     }
                 } else if (mEnableSelectedCharacteristicsFlag) {
                     if (mSelectedCharacteristicsToEnable.size() > 0) {
@@ -297,8 +295,8 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-
             if (status == BluetoothGatt.GATT_SUCCESS) {
+
                 UUID descriptorUUID = descriptor.getUuid();
                 final Intent dataAvailableIntent = new Intent(ACTION_DATA_AVAILABLE);
                 Bundle bundle = new Bundle();
@@ -366,8 +364,9 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+            } else {
 
-            if (status != BluetoothGatt.GATT_SUCCESS) {
                 Intent characteristicErrorIntent = new Intent(ACTION_GATT_CHARACTERISTIC_ERROR);
                 characteristicErrorIntent.putExtra(Constants.EXTRA_CHARACTERISTIC_ERROR_MESSAGE, "" + status);
                 sendGlobalBroadcastIntent(mContext, characteristicErrorIntent);
@@ -407,12 +406,10 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-
             // GATT Characteristic read
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastNotifyUpdate(characteristic);
             } else {
-
                 if (status == BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION
                         || status == BluetoothGatt.GATT_INSUFFICIENT_ENCRYPTION) {
 //                    pairDevice();
@@ -472,8 +469,6 @@ public class BluetoothLeService extends Service {
             status = mBluetoothGatt.requestMtu(mtu);
             retry--;
         }
-
-        Resources res = mContext.getResources();
     }
 
     private final IBinder mBinder = new LocalBinder();
@@ -598,6 +593,7 @@ public class BluetoothLeService extends Service {
             bundle.putString(Constants.EXTRA_BTL_VALUE,
                     Utils.getBatteryLevel(characteristic));
         }
+
         // Alert level read value
         else if (characteristic.getUuid().equals(UUIDDatabase.UUID_ALERT_LEVEL)) {
             bundle.putString(Constants.EXTRA_ALERT_VALUE,
@@ -636,26 +632,26 @@ public class BluetoothLeService extends Service {
      * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
      * callback.
      */
-    public static void connect(final String address, final String deviceName, Context context) {
+    public static boolean connect(final String address, Context context) {
         mContext = context;
         Utils.setIntSharedPreference(mContext, Constants.PREF_MTU_NEGOTIATED, 0);//The actual value will be set in hte onMtuChanged callback method
 
         if (mBluetoothAdapter == null || address == null) {
-            return;
+            return false;
         }
 
         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
         if (device == null) {
-            return;
+            return false;
         }
 
         // We want to directly connect to the device, so we are setting the autoConnect parameter to false.
         mBluetoothGatt = device.connectGatt(context, false, mGattCallback);
         mBluetoothDeviceAddress = address;
-        mBluetoothDeviceName = deviceName;
+        mBluetoothDeviceName = device.getName();
         mClearCacheOnDisconnect = Utils.getBooleanSharedPreference(mContext, Constants.PREF_CLEAR_CACHE_ON_DISCONNECT);
         mUnpairOnDisconnect = Utils.getBooleanSharedPreference(mContext, Constants.PREF_UNPAIR_ON_DISCONNECT);
-
+        return true;
     }
 
     /**
@@ -757,6 +753,22 @@ public class BluetoothLeService extends Service {
         mBluetoothGatt.readDescriptor(descriptor);
     }
 
+    /**
+     * Request a write with no response on a given
+     * {@code BluetoothGattCharacteristic}.
+     *
+     * @param characteristic
+     * @param byteArray      to write
+     */
+    public static void writeCharacteristicNoResponse(BluetoothGattCharacteristic characteristic, byte[] byteArray) {
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+            return;
+        } else {
+            characteristic.setValue(byteArray);
+            mBluetoothGatt.writeCharacteristic(characteristic);
+        }
+    }
+
     public static void writeOTABootLoaderCommand(BluetoothGattCharacteristic characteristic, byte[] value, boolean isExitBootloaderCmd) {
         synchronized (mGattCallback) {
             writeOTABootLoaderCommand(characteristic, value);
@@ -842,7 +854,6 @@ public class BluetoothLeService extends Service {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             return;
         }
-
         characteristic.setValue(value);
         int counter = 20;
         boolean status;
@@ -947,7 +958,6 @@ public class BluetoothLeService extends Service {
                 mBluetoothGatt.writeDescriptor(descriptor);
             }
         }
-
         mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
     }
 
@@ -977,7 +987,6 @@ public class BluetoothLeService extends Service {
                 mBluetoothGatt.writeDescriptor(descriptor);
             }
         }
-
         mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
     }
 
@@ -1222,5 +1231,127 @@ public class BluetoothLeService extends Service {
      */
     public static boolean isPropertySupported(BluetoothGattCharacteristic characteristic, int requestedProps) {
         return (characteristic.getProperties() & requestedProps) > 0;
+    }
+
+    /**
+     * Tries to find a specific gatt service by uuid
+     * (returns null if the service is not found)
+     * @param uuidService
+     * @return
+     */
+    public static BluetoothGattService getService(UUID uuidService){
+        List<BluetoothGattService> supportedServices = BluetoothLeService.getSupportedGattServices();
+
+        if (supportedServices.size() > 0) {
+            ArrayList<HashMap<String, BluetoothGattService>> gattServiceData = prepareData(supportedServices);
+
+            // Find the gatt service
+            for (HashMap<String, BluetoothGattService> item : gattServiceData) {
+                BluetoothGattService gattService = item.get("UUID");
+                if (gattService.getUuid().equals(uuidService)) {
+                    return item.get("UUID");
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Prepare GATTServices data.
+     *
+     * @param gattServices
+     */
+    private static ArrayList<HashMap<String, BluetoothGattService>> prepareData(List<BluetoothGattService> gattServices) {
+        boolean mFindMeSet = false;
+        boolean mProximitySet = false;
+        boolean mGattSet = false;
+        ArrayList<HashMap<String, BluetoothGattService>> gattServiceData = new ArrayList<>();
+        if (gattServices == null) {
+            return gattServiceData;
+        }
+
+        // Loops through available GATT Services.
+        for (BluetoothGattService gattService : gattServices) {
+            HashMap<String, BluetoothGattService> currentServiceData = new HashMap<String, BluetoothGattService>();
+            UUID uuid = gattService.getUuid();
+            // Optimization code for FindMe Profile
+            if (uuid.equals(UUIDDatabase.UUID_IMMEDIATE_ALERT_SERVICE)) {
+                currentServiceData.put(LIST_UUID, gattService);
+                if (!mFindMeSet) {
+                    mFindMeSet = true;
+                    gattServiceData.add(currentServiceData);
+                }
+            } // Optimization code for Proximity Profile
+            else if (uuid.equals(UUIDDatabase.UUID_LINK_LOSS_SERVICE)
+                    || uuid.equals(UUIDDatabase.UUID_TRANSMISSION_POWER_SERVICE)) {
+                currentServiceData.put(LIST_UUID, gattService);
+                if (!mProximitySet) {
+                    mProximitySet = true;
+                    gattServiceData.add(currentServiceData);
+                }
+            } // Optimization code for GATTDB
+            else if (uuid.equals(UUIDDatabase.UUID_GENERIC_ACCESS_SERVICE)
+                    || uuid.equals(UUIDDatabase.UUID_GENERIC_ATTRIBUTE_SERVICE)) {
+                currentServiceData.put(LIST_UUID, gattService);
+                if (!mGattSet) {
+                    mGattSet = true;
+                    gattServiceData.add(currentServiceData);
+                }
+            } // Optimization code for HID
+            else if (uuid.equals(UUIDDatabase.UUID_HID_SERVICE)) {
+                /**
+                 * Special handling for KITKAT devices
+                 */
+                if (android.os.Build.VERSION.SDK_INT < 21) {
+                    List<BluetoothGattCharacteristic> allCharacteristics = gattService.getCharacteristics();
+                    List<BluetoothGattCharacteristic> RDKCharacteristics = new ArrayList<BluetoothGattCharacteristic>();
+                    List<BluetoothGattDescriptor> RDKDescriptors = new ArrayList<BluetoothGattDescriptor>();
+
+                    //Find all Report characteristics
+                    for (BluetoothGattCharacteristic characteristic : allCharacteristics) {
+                        if (characteristic.getUuid().equals(UUIDDatabase.UUID_REPORT)) {
+                            RDKCharacteristics.add(characteristic);
+                        }
+                    }
+
+                    //Find all Report descriptors
+                    for (BluetoothGattCharacteristic rdkcharacteristic : RDKCharacteristics) {
+                        List<BluetoothGattDescriptor> descriptors = rdkcharacteristic.
+                                getDescriptors();
+                        for (BluetoothGattDescriptor descriptor : descriptors) {
+                            RDKDescriptors.add(descriptor);
+                        }
+                    }
+                    /**
+                     * Wait for all  descriptors to receive
+                     */
+                    if (RDKDescriptors.size() == RDKCharacteristics.size() * 2) {
+
+                        for (int pos = 0, descPos = 0; descPos < RDKCharacteristics.size(); pos++, descPos++) {
+                            BluetoothGattCharacteristic rdkCharacteristic = RDKCharacteristics.get(descPos);
+                            //Mapping the characteristic and descriptors
+                            BluetoothGattDescriptor clientdescriptor = RDKDescriptors.get(pos);
+                            BluetoothGattDescriptor reportdescriptor = RDKDescriptors.get(pos + 1);
+                            if (!rdkCharacteristic.getDescriptors().contains(clientdescriptor)) {
+                                rdkCharacteristic.addDescriptor(clientdescriptor);
+                            }
+                            if (!rdkCharacteristic.getDescriptors().contains(reportdescriptor)) {
+                                rdkCharacteristic.addDescriptor(reportdescriptor);
+                            }
+                            pos++;
+                        }
+                    }
+                    currentServiceData.put(LIST_UUID, gattService);
+                    gattServiceData.add(currentServiceData);
+                } else {
+                    currentServiceData.put(LIST_UUID, gattService);
+                    gattServiceData.add(currentServiceData);
+                }
+            } else {
+                currentServiceData.put(LIST_UUID, gattService);
+                gattServiceData.add(currentServiceData);
+            }
+        }
+        return gattServiceData;
     }
 }
