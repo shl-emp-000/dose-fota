@@ -257,11 +257,6 @@ public class BluetoothLeService extends Service {
                         mRDKCharacteristics.remove(0);
                         enableAllRDKCharacteristics();
                     }
-                } else if (mEnableGlucoseCharacteristicsFlag) {
-                    if (mGlucoseCharacteristics.size() > 0) {
-                        mGlucoseCharacteristics.remove(0);
-                        enableAllGlucoseCharacteristics();
-                    }
                 } else if (mEnableSelectedCharacteristicsFlag) {
                     if (mSelectedCharacteristicsToEnable.size() > 0) {
                         mSelectedCharacteristicsToEnable.remove(0);
@@ -506,54 +501,9 @@ public class BluetoothLeService extends Service {
                 characteristic.getService().getUuid().toString());
         bundle.putInt(Constants.EXTRA_BYTE_SERVICE_INSTANCE_VALUE,
                 characteristic.getService().getInstanceId());
-        // Heart rate Measurement notify value
-        if (characteristic.getUuid().equals(UUIDDatabase.UUID_HEART_RATE_MEASUREMENT)) {
-            if (HRMParser.isValidValue(characteristic)) {
-                String heartRate = HRMParser.getHeartRate(characteristic);
-                String sensorContact = HRMParser.getSensorContactStatus(characteristic);
-                String energyExpended = HRMParser.getEnergyExpended(characteristic);
-                ArrayList<Integer> rrInterval = HRMParser.getRRInterval(characteristic);
-                bundle.putString(Constants.EXTRA_HRM_HEART_RATE_VALUE, heartRate);
-                bundle.putString(Constants.EXTRA_HRM_SENSOR_CONTACT_VALUE, sensorContact);
-                bundle.putString(Constants.EXTRA_HRM_ENERGY_EXPENDED_VALUE, energyExpended);
-                bundle.putIntegerArrayList(Constants.EXTRA_HRM_RR_INTERVAL_VALUE, rrInterval);
-            }
-        }
-        // Health thermometer notify value
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_TEMPERATURE_MEASUREMENT)) {
-            ArrayList<String> htmData = HTMParser.parseTemperatureMeasurement(characteristic, mContext);
-            bundle.putStringArrayList(Constants.EXTRA_HTM_TEMPERATURE_MEASUREMENT_VALUE, htmData);
-        }
-        // Blood pressure measurement notify value
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_BLOOD_PRESSURE_MEASUREMENT)) {
-            String bloodPressureSystolic = BloodPressureParser
-                    .getSystolicBloodPressure(characteristic);
-            String bloodPressureDiastolic = BloodPressureParser
-                    .getDiastolicBloodPressure(characteristic);
-            String bloodPressureSystolicUnit = BloodPressureParser
-                    .getSystolicBloodPressureUnit(characteristic, mContext);
-            String bloodPressureDiastolicUnit = BloodPressureParser
-                    .getDiaStolicBloodPressureUnit(characteristic, mContext);
-            bundle.putString(
-                    Constants.EXTRA_PRESURE_SYSTOLIC_UNIT_VALUE,
-                    bloodPressureSystolicUnit);
-            bundle.putString(
-                    Constants.EXTRA_PRESURE_DIASTOLIC_UNIT_VALUE,
-                    bloodPressureDiastolicUnit);
-            bundle.putString(
-                    Constants.EXTRA_PRESURE_SYSTOLIC_VALUE,
-                    bloodPressureSystolic);
-            bundle.putString(
-                    Constants.EXTRA_PRESURE_DIASTOLIC_VALUE,
-                    bloodPressureDiastolic);
-        }
-        // Cycling speed Measurement notify value
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_CSC_MEASURE)) {
-            ArrayList<String> cscValues = CSCParser.getCyclingSpeedCadence(characteristic);
-            bundle.putStringArrayList(Constants.EXTRA_CSC_VALUE, cscValues);
-        }
+
         //RDK characteristic
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_REPORT)) {
+        if (characteristic.getUuid().equals(UUIDDatabase.UUID_REPORT)) {
             BluetoothGattDescriptor descriptor = characteristic.getDescriptor
                     (UUIDDatabase.UUID_REPORT_REFERENCE);
             if (descriptor != null) {
@@ -579,11 +529,6 @@ public class BluetoothLeService extends Service {
             otaDataAvailableIntent.putExtras(bundle);
             // NOTE: sending GLOBAL broadcast as there are receivers in AndroidManifest.xml which listen to ACTION_OTA_DATA_AVAILABLE_V1 and ACTION_OTA_DATA_AVAILABLE intents
             sendGlobalBroadcastIntent(mContext, otaDataAvailableIntent);
-        }
-        // Body sensor location read value
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_BODY_SENSOR_LOCATION)) {
-            bundle.putString(Constants.EXTRA_HRM_BODY_SENSOR_LOCATION_VALUE,
-                    HRMParser.getBodySensorLocation(characteristic, mContext));
         }
         // Manufacturer Name read value
         else if (characteristic.getUuid().equals(UUIDDatabase.UUID_MANUFACTURER_NAME)) {
@@ -635,31 +580,7 @@ public class BluetoothLeService extends Service {
             bundle.putString(Constants.EXTRA_BTL_VALUE,
                     Utils.getBatteryLevel(characteristic));
         }
-        // Health thermometer sensor location read value
-        else if (characteristic.getUuid()
-                .equals(UUIDDatabase.UUID_TEMPERATURE_TYPE)) {
-            bundle.putString(Constants.EXTRA_HTM_TEMPERATURE_TYPE_VALUE, HTMParser
-                    .parseTemperatureType(characteristic, mContext));
-        }
-        // CapSense proximity read value
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_CAPSENSE_PROXIMITY) ||
-                characteristic.getUuid().equals(UUIDDatabase.UUID_CAPSENSE_PROXIMITY_CUSTOM)) {
-            bundle.putInt(Constants.EXTRA_CAPPROX_VALUE,
-                    CapSenseParser.getCapSenseProximity(characteristic));
-        }
-        // CapSense slider read value
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_CAPSENSE_SLIDER) ||
-                characteristic.getUuid().equals(UUIDDatabase.UUID_CAPSENSE_SLIDER_CUSTOM)) {
-            bundle.putInt(Constants.EXTRA_CAPSLIDER_VALUE,
-                    CapSenseParser.getCapSenseSlider(characteristic));
-        }
-        // CapSense buttons read value
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_CAPSENSE_BUTTONS) ||
-                characteristic.getUuid().equals(UUIDDatabase.UUID_CAPSENSE_BUTTONS_CUSTOM)) {
-            bundle.putIntegerArrayList(
-                    Constants.EXTRA_CAPBUTTONS_VALUE,
-                    CapSenseParser.getCapSenseButtons(characteristic));
-        }
+
         // Alert level read value
         else if (characteristic.getUuid().equals(UUIDDatabase.UUID_ALERT_LEVEL)) {
             bundle.putString(Constants.EXTRA_ALERT_VALUE,
@@ -670,119 +591,6 @@ public class BluetoothLeService extends Service {
                 .equals(UUIDDatabase.UUID_TRANSMISSION_POWER_LEVEL)) {
             bundle.putInt(Constants.EXTRA_POWER_VALUE,
                     Utils.getTransmissionPower(characteristic));
-        }
-        // RGB LED read value
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_RGB_LED) ||
-                characteristic.getUuid().equals(UUIDDatabase.UUID_RGB_LED_CUSTOM)) {
-            bundle.putString(Constants.EXTRA_RGB_VALUE,
-                    RGBParser.getRGBAString(characteristic));
-        }
-        // Glucose Measurement value
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_GLUCOSE_MEASUREMENT)
-                || characteristic.getUuid().equals(UUIDDatabase.UUID_GLUCOSE_MEASUREMENT_CONTEXT)) {
-            bundle.putSparseParcelableArray(Constants.EXTRA_GLUCOSE_MEASUREMENT,
-                    GlucoseParser.getGlucoseMeasurement(characteristic));
-        }
-//        // Glucose Measurement Context value
-//        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_GLUCOSE_MEASUREMENT_CONTEXT)) {
-//            mBundle.putSparseParcelableArray(Constants.EXTRA_GLUCOSE_MEASUREMENT_CONTEXT,
-//                    GlucoseParser.getGlucoseMeasurement(characteristic));
-//        }
-        // Glucose RACP
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_RECORD_ACCESS_CONTROL_POINT)) {
-            GlucoseParser.onCharacteristicIndicated(characteristic);
-        }
-        // Running speed read value
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_RSC_MEASURE)) {
-            bundle.putStringArrayList(Constants.EXTRA_RSC_VALUE,
-                    RSCParser.getRunningSpeedAndCadence(characteristic));
-        }
-        // Accelerometer X read value
-        else if (characteristic.getUuid()
-                .equals(UUIDDatabase.UUID_ACCELEROMETER_READING_X)) {
-            bundle.putInt(Constants.EXTRA_ACCX_VALUE, SensorHubParser
-                    .getAcceleroMeterXYZReading(characteristic));
-        }
-        // Accelerometer Y read value
-        else if (characteristic.getUuid()
-                .equals(UUIDDatabase.UUID_ACCELEROMETER_READING_Y)) {
-            bundle.putInt(Constants.EXTRA_ACCY_VALUE, SensorHubParser
-                    .getAcceleroMeterXYZReading(characteristic));
-        }
-        // Accelerometer Z read value
-        else if (characteristic.getUuid()
-                .equals(UUIDDatabase.UUID_ACCELEROMETER_READING_Z)) {
-            bundle.putInt(Constants.EXTRA_ACCZ_VALUE, SensorHubParser
-                    .getAcceleroMeterXYZReading(characteristic));
-        }
-        // Temperature read value
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_TEMPERATURE_READING)) {
-            bundle.putFloat(Constants.EXTRA_STEMP_VALUE,
-                    SensorHubParser
-                            .getThermometerReading(characteristic));
-        }
-        // Barometer read value
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_BAROMETER_READING)) {
-            bundle.putInt(Constants.EXTRA_SPRESSURE_VALUE,
-                    SensorHubParser.getBarometerReading(characteristic));
-        }
-        // Accelerometer scan interval read value
-        else if (characteristic.getUuid()
-                .equals(UUIDDatabase.UUID_ACCELEROMETER_SENSOR_SCAN_INTERVAL)) {
-            bundle.putInt(
-                    Constants.EXTRA_ACC_SENSOR_SCAN_VALUE,
-                    SensorHubParser
-                            .getSensorScanIntervalReading(characteristic));
-        }
-        // Accelerometer analog sensor read value
-        else if (characteristic.getUuid()
-                .equals(UUIDDatabase.UUID_ACCELEROMETER_ANALOG_SENSOR)) {
-            bundle.putInt(Constants.EXTRA_ACC_SENSOR_TYPE_VALUE,
-                    SensorHubParser
-                            .getSensorTypeReading(characteristic));
-        }
-        // Accelerometer data accumulation read value
-        else if (characteristic.getUuid()
-                .equals(UUIDDatabase.UUID_ACCELEROMETER_DATA_ACCUMULATION)) {
-            bundle.putInt(Constants.EXTRA_ACC_FILTER_VALUE,
-                    SensorHubParser
-                            .getFilterConfiguration(characteristic));
-        }
-        // Temperature sensor scan read value
-        else if (characteristic.getUuid()
-                .equals(UUIDDatabase.UUID_TEMPERATURE_SENSOR_SCAN_INTERVAL)) {
-            bundle.putInt(
-                    Constants.EXTRA_STEMP_SENSOR_SCAN_VALUE,
-                    SensorHubParser
-                            .getSensorScanIntervalReading(characteristic));
-        }
-        // Temperature analog sensor read value
-        else if (characteristic.getUuid()
-                .equals(UUIDDatabase.UUID_TEMPERATURE_ANALOG_SENSOR)) {
-            bundle.putInt(Constants.EXTRA_STEMP_SENSOR_TYPE_VALUE,
-                    SensorHubParser
-                            .getSensorTypeReading(characteristic));
-        }
-        // Barometer sensor scan interval read value
-        else if (characteristic.getUuid()
-                .equals(UUIDDatabase.UUID_BAROMETER_SENSOR_SCAN_INTERVAL)) {
-            bundle.putInt(
-                    Constants.EXTRA_SPRESSURE_SENSOR_SCAN_VALUE,
-                    SensorHubParser
-                            .getSensorScanIntervalReading(characteristic));
-        }
-        // Barometer digital sensor
-        else if (characteristic.getUuid()
-                .equals(UUIDDatabase.UUID_BAROMETER_DIGITAL_SENSOR)) {
-            bundle.putInt(Constants.EXTRA_SPRESSURE_SENSOR_TYPE_VALUE,
-                    SensorHubParser
-                            .getSensorTypeReading(characteristic));
-        }
-        // Barometer threshold for indication read value
-        else if (characteristic.getUuid()
-                .equals(UUIDDatabase.UUID_BAROMETER_THRESHOLD_FOR_INDICATION)) {
-            bundle.putInt(Constants.EXTRA_SPRESSURE_THRESHOLD_VALUE,
-                    SensorHubParser.getThresholdValue(characteristic));
         }
 
         dataAvailableIntent.putExtras(bundle);
@@ -916,10 +724,6 @@ public class BluetoothLeService extends Service {
                 || (characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_READ) == 0) {
             return;
         }
-        String serviceUUID = characteristic.getService().getUuid().toString();
-        String serviceName = GattAttributes.lookupUUID(characteristic.getService().getUuid(), serviceUUID);
-        String characteristicUUID = characteristic.getUuid().toString();
-        String characteristicName = GattAttributes.lookupUUID(characteristic.getUuid(), characteristicUUID);
         mBluetoothGatt.readCharacteristic(characteristic);
     }
 
@@ -1270,23 +1074,6 @@ public class BluetoothLeService extends Service {
         } else {
             Utils.debug("RDK characteristics: all enabled");
             mEnableRDKCharacteristicsFlag = false;
-            broadcastWriteStatusUpdate(ACTION_WRITE_COMPLETED);
-        }
-    }
-
-    public static void enableAllGlucoseCharacteristics() {
-        if (mGlucoseCharacteristics.size() > 0) {
-            mEnableGlucoseCharacteristicsFlag = true;
-            BluetoothGattCharacteristic c = mGlucoseCharacteristics.get(0);
-            Utils.debug("Glucose characteristics: enabling characteristic " + c.getUuid());
-            if (c.getUuid().equals(UUIDDatabase.UUID_RECORD_ACCESS_CONTROL_POINT)) {
-                setCharacteristicIndication(c, true);
-            } else {
-                setCharacteristicNotification(c, true);
-            }
-        } else {
-            Utils.debug("Glucose characteristics: all enabled");
-            mEnableGlucoseCharacteristicsFlag = false;
             broadcastWriteStatusUpdate(ACTION_WRITE_COMPLETED);
         }
     }
