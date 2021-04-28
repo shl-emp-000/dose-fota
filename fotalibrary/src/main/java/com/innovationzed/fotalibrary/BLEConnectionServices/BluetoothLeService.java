@@ -632,17 +632,17 @@ public class BluetoothLeService extends Service {
      * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
      * callback.
      */
-    public static void connect(final String address, Context context) {
+    public static boolean connect(final String address, Context context) {
         mContext = context;
         Utils.setIntSharedPreference(mContext, Constants.PREF_MTU_NEGOTIATED, 0);//The actual value will be set in hte onMtuChanged callback method
 
         if (mBluetoothAdapter == null || address == null) {
-            return;
+            return false;
         }
 
         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
         if (device == null) {
-            return;
+            return false;
         }
 
         // We want to directly connect to the device, so we are setting the autoConnect parameter to false.
@@ -651,6 +651,7 @@ public class BluetoothLeService extends Service {
         mBluetoothDeviceName = device.getName();
         mClearCacheOnDisconnect = Utils.getBooleanSharedPreference(mContext, Constants.PREF_CLEAR_CACHE_ON_DISCONNECT);
         mUnpairOnDisconnect = Utils.getBooleanSharedPreference(mContext, Constants.PREF_UNPAIR_ON_DISCONNECT);
+        return true;
     }
 
     /**
