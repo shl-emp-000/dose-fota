@@ -60,6 +60,7 @@ import com.innovationzed.fotalibrary.CommonUtils.Constants;
 import com.innovationzed.fotalibrary.CommonUtils.GattAttributes;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
+import com.innovationzed.fotalibrary.FotaApi;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -173,6 +174,11 @@ public class BluetoothLeService extends Service {
 
     public static boolean mSyncCommandFlag;
     private static final Handler mHandler = new Handler(Looper.getMainLooper());
+
+    /**
+     * UUID key
+     */
+    private static final String LIST_UUID = "UUID";
 
     /**
      * Implements callback methods for GATT events that the app cares about. For
@@ -1225,5 +1231,139 @@ public class BluetoothLeService extends Service {
      */
     public static boolean isPropertySupported(BluetoothGattCharacteristic characteristic, int requestedProps) {
         return (characteristic.getProperties() & requestedProps) > 0;
+    }
+
+    /**
+     * Connects to device and tries to find a specific gatt service by uuid
+     * (returns null if the service is not found)
+     * @param context
+     * @param uuidService
+     * @return
+     */
+    public static BluetoothGattService getService(Context context, UUID uuidService){
+        // TODO: refactor solution to use the actions broadcasted in onConnectionStateChange and onServicesDiscovered
+        BluetoothLeService.connect(FotaApi.macAddress, context);
+        try{
+            Thread.sleep(1500);
+            boolean result = BluetoothLeService.discoverServices();
+            Thread.sleep(1500);
+            if (result) {
+                List<BluetoothGattService> supportedServices = BluetoothLeService.getSupportedGattServices();
+
+                if (supportedServices.size() > 0) {
+                    ArrayList<HashMap<String, BluetoothGattService>> gattServiceData = prepareData(supportedServices);
+
+                    // Find the gatt service
+                    for (HashMap<String, BluetoothGattService> item : gattServiceData) {
+                        BluetoothGattService gattService = item.get("UUID");
+                        if (gattService.getUuid().equals(uuidService)) {
+                            return item.get("UUID");
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return null;
+        }
+        return null;
+    }
+
+    /**
+     * Prepare GATTServices data.
+     *
+     * @param gattServices
+     */
+    private static ArrayList<HashMap<String, BluetoothGattService>> prepareData(List<BluetoothGattService> gattServices) {
+        boolean mFindMeSet = false;
+        boolean mProximitySet = false;
+        boolean mGattSet = false;
+        ArrayList<HashMap<String, BluetoothGattService>> gattServiceData = new ArrayList<>();
+        if (gattServices == null) {
+            return gattServiceData;
+        }
+
+        // Loops through available GATT Services.
+        for (BluetoothGattService gattService : gattServices) {
+            HashMap<String, BluetoothGattService> currentServiceData = new HashMap<String, BluetoothGattService>();
+            UUID uuid = gattService.getUuid();
+            // Optimization code for FindMe Profile
+            if (uuid.equals(UUIDDatabase.UUID_IMMEDIATE_ALERT_SERVICE)) {
+                currentServiceData.put(LIST_UUID, gattService);
+                if (!mFindMeSet) {
+                    mFindMeSet = true;
+                    gattServiceData.add(currentServiceData);
+                }
+            } // Optimization code for Proximity Profile
+            else if (uuid.equals(UUIDDatabase.UUID_LINK_LOSS_SERVICE)
+                    || uuid.equals(UUIDDatabase.UUID_TRANSMISSION_POWER_SERVICE)) {
+                currentServiceData.put(LIST_UUID, gattService);
+                if (!mProximitySet) {
+                    mProximitySet = true;
+                    gattServiceData.add(currentServiceData);
+                }
+            } // Optimization code for GATTDB
+            else if (uuid.equals(UUIDDatabase.UUID_GENERIC_ACCESS_SERVICE)
+                    || uuid.equals(UUIDDatabase.UUID_GENERIC_ATTRIBUTE_SERVICE)) {
+                currentServiceData.put(LIST_UUID, gattService);
+                if (!mGattSet) {
+                    mGattSet = true;
+                    gattServiceData.add(currentServiceData);
+                }
+            } // Optimization code for HID
+            else if (uuid.equals(UUIDDatabase.UUID_HID_SERVICE)) {
+                /**
+                 * Special handling for KITKAT devices
+                 */
+                if (android.os.Build.VERSION.SDK_INT < 21) {
+                    List<BluetoothGattCharacteristic> allCharacteristics = gattService.getCharacteristics();
+                    List<BluetoothGattCharacteristic> RDKCharacteristics = new ArrayList<BluetoothGattCharacteristic>();
+                    List<BluetoothGattDescriptor> RDKDescriptors = new ArrayList<BluetoothGattDescriptor>();
+
+                    //Find all Report characteristics
+                    for (BluetoothGattCharacteristic characteristic : allCharacteristics) {
+                        if (characteristic.getUuid().equals(UUIDDatabase.UUID_REPORT)) {
+                            RDKCharacteristics.add(characteristic);
+                        }
+                    }
+
+                    //Find all Report descriptors
+                    for (BluetoothGattCharacteristic rdkcharacteristic : RDKCharacteristics) {
+                        List<BluetoothGattDescriptor> descriptors = rdkcharacteristic.
+                                getDescriptors();
+                        for (BluetoothGattDescriptor descriptor : descriptors) {
+                            RDKDescriptors.add(descriptor);
+                        }
+                    }
+                    /**
+                     * Wait for all  descriptors to receive
+                     */
+                    if (RDKDescriptors.size() == RDKCharacteristics.size() * 2) {
+
+                        for (int pos = 0, descPos = 0; descPos < RDKCharacteristics.size(); pos++, descPos++) {
+                            BluetoothGattCharacteristic rdkCharacteristic = RDKCharacteristics.get(descPos);
+                            //Mapping the characteristic and descriptors
+                            BluetoothGattDescriptor clientdescriptor = RDKDescriptors.get(pos);
+                            BluetoothGattDescriptor reportdescriptor = RDKDescriptors.get(pos + 1);
+                            if (!rdkCharacteristic.getDescriptors().contains(clientdescriptor)) {
+                                rdkCharacteristic.addDescriptor(clientdescriptor);
+                            }
+                            if (!rdkCharacteristic.getDescriptors().contains(reportdescriptor)) {
+                                rdkCharacteristic.addDescriptor(reportdescriptor);
+                            }
+                            pos++;
+                        }
+                    }
+                    currentServiceData.put(LIST_UUID, gattService);
+                    gattServiceData.add(currentServiceData);
+                } else {
+                    currentServiceData.put(LIST_UUID, gattService);
+                    gattServiceData.add(currentServiceData);
+                }
+            } else {
+                currentServiceData.put(LIST_UUID, gattService);
+                gattServiceData.add(currentServiceData);
+            }
+        }
+        return gattServiceData;
     }
 }

@@ -86,9 +86,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     public static final String REGEX_ENDS_WITH_CYACD_OR_CYACD2 = "(?i)\\.cyacd2?$";
     public static boolean mFileUpgradeStarted = false;
 
-    // UUID key
-    private static final String LIST_UUID = "UUID";
-
     static ArrayList<HashMap<String, BluetoothGattService>> mGattServiceData = new ArrayList<>();
     static ArrayList<HashMap<String, BluetoothGattService>> mGattServiceFindMeData = new ArrayList<>();
     static ArrayList<HashMap<String, BluetoothGattService>> mGattServiceProximityData = new ArrayList<HashMap<String, BluetoothGattService>>();
@@ -117,6 +114,8 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
 
     private OTAFUHandler mOTAFUHandler = DUMMY_HANDLER;//Initializing to DUMMY_HANDLER to avoid NPEs
 
+    private Context mContext;
+
     private OTAResponseReceiver_v1 mOTAResponseReceiverV1;
     private OTAResponseReceiver_v0 mOTAResponseReceiverV0;
     private static boolean mIsBonded = false;
@@ -140,9 +139,9 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                         } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && mIsBonded){
                             OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not pair with device. Possible reasons: user did not approve pairing request or device was not in boot mode.");
                         } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDED && mIsBonded){
-                            boolean result = connectAndDiscoverServices();
-                            if(result){
-                                mHasPairedSuccessfully = true;
+                            mHasPairedSuccessfully = true;
+                            mOtaService = BluetoothLeService.getService(mContext, UUIDDatabase.UUID_OTA_UPDATE_SERVICE);
+                            if(mOtaService != null){
                                 doFota();
                             } else {
                                 OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not connect or discover services of device.");
@@ -167,6 +166,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
 
     @Override
     public void onCreate() {
+        mContext = this;
         mIsFotaInProgress = true;
         mIsBonded = false;
         mOTAResponseReceiverV1 = new OTAResponseReceiver_v1();
@@ -186,14 +186,17 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         };
         mTimeoutHandler.postDelayed(mTimeoutRunnable, 60000);
 
-        if(connect(this)){
-            if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
-                BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
-            } else {
-                BluetoothLeService.getRemoteDevice().createBond();
-            }
+        BluetoothLeService.connect(FotaApi.macAddress, this);
+        try {
+            Thread.sleep(1500);
+        } catch (Exception e) {
+
+        }
+
+        if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
+            BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
         } else {
-            OTAFinished(this, ACTION_OTA_FAIL, "Unable to connect to device");
+            BluetoothLeService.getRemoteDevice().createBond();
         }
     }
 
@@ -223,172 +226,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         Bundle extras = intent.getExtras();
         if (action.equals(BluetoothLeService.ACTION_OTA_STATUS) || action.equals(BluetoothLeService.ACTION_OTA_STATUS_V1)) {
             mOTAFUHandler.processOTAStatus(bootloaderState, extras);
-        }
-    }
-
-    private static boolean connect(Context context){
-        int state = STATE_DISCONNECTED;
-        int n = 0;
-        while (n < 10 && state != STATE_CONNECTED){
-            BluetoothLeService.connect(FotaApi.macAddress, context);
-            long timer = System.currentTimeMillis();
-            n++;
-            do {
-                state = BluetoothLeService.getConnectionState();
-            } while (state != STATE_CONNECTED && System.currentTimeMillis() - timer < 2000);
-        }
-
-        return state == STATE_CONNECTED;
-    }
-
-    private boolean connectAndDiscoverServices(){
-        boolean result = connect(this);
-        try{
-            Thread.sleep(500);
-        } catch (Exception e) {
-            OTAFinished(this, ACTION_OTA_FAIL, "Exception during Thread.sleep: " + e.getMessage());
-        }
-        result &= BluetoothLeService.discoverServices();
-
-        if (result) {
-            int n = 0;
-            List<BluetoothGattService> supportedServices = BluetoothLeService.getSupportedGattServices();
-            while (n < 10 && supportedServices.size() == 0) {
-                supportedServices = BluetoothLeService.getSupportedGattServices();
-                n++;
-                try {
-                    Thread.sleep(2000);
-                } catch (Exception e){
-                    return false;
-                }
-            }
-            if (supportedServices.size() > 0) {
-                prepareData(supportedServices);
-
-                // Find the gatt service for ota update
-                for (HashMap<String, BluetoothGattService> item : mGattServiceData) {
-                    BluetoothGattService gattService = item.get("UUID");
-                    if (gattService.getUuid().equals(UUIDDatabase.UUID_OTA_UPDATE_SERVICE)) {
-                        mService = item.get("UUID");
-                        OTAFirmwareUpgrade.mOtaService = mService;
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Prepare GATTServices data.
-     *
-     * @param gattServices
-     */
-    private void prepareData(List<BluetoothGattService> gattServices) {
-        boolean mFindMeSet = false;
-        boolean mProximitySet = false;
-        boolean mGattSet = false;
-        if (gattServices == null)
-            return;
-        // Clear all array list before entering values.
-        mGattServiceData.clear();
-        mGattServiceFindMeData.clear();
-        mGattServiceMasterData.clear();
-
-        // Loops through available GATT Services.
-        for (BluetoothGattService gattService : gattServices) {
-            HashMap<String, BluetoothGattService> currentServiceData = new HashMap<String, BluetoothGattService>();
-            UUID uuid = gattService.getUuid();
-            // Optimization code for FindMe Profile
-            if (uuid.equals(UUIDDatabase.UUID_IMMEDIATE_ALERT_SERVICE)) {
-                currentServiceData.put(LIST_UUID, gattService);
-                mGattServiceMasterData.add(currentServiceData);
-                if (!mGattServiceFindMeData.contains(currentServiceData)) {
-                    mGattServiceFindMeData.add(currentServiceData);
-                }
-                if (!mFindMeSet) {
-                    mFindMeSet = true;
-                    mGattServiceData.add(currentServiceData);
-                }
-            }
-            // Optimization code for Proximity Profile
-            else if (uuid.equals(UUIDDatabase.UUID_LINK_LOSS_SERVICE)
-                    || uuid.equals(UUIDDatabase.UUID_TRANSMISSION_POWER_SERVICE)) {
-                currentServiceData.put(LIST_UUID, gattService);
-                mGattServiceMasterData.add(currentServiceData);
-                if (!mGattServiceProximityData.contains(currentServiceData)) {
-                    mGattServiceProximityData.add(currentServiceData);
-                }
-                if (!mProximitySet) {
-                    mProximitySet = true;
-                    mGattServiceData.add(currentServiceData);
-                }
-            }// Optimization code for GATTDB
-            else if (uuid.equals(UUIDDatabase.UUID_GENERIC_ACCESS_SERVICE)
-                    || uuid.equals(UUIDDatabase.UUID_GENERIC_ATTRIBUTE_SERVICE)) {
-                currentServiceData.put(LIST_UUID, gattService);
-                mGattDbServiceData.add(currentServiceData);
-                if (!mGattSet) {
-                    mGattSet = true;
-                    mGattServiceData.add(currentServiceData);
-                }
-            } //Optimization code for HID
-            else if (uuid.equals(UUIDDatabase.UUID_HID_SERVICE)) {
-                /**
-                 * Special handling for KITKAT devices
-                 */
-                if (android.os.Build.VERSION.SDK_INT < 21) {
-                    List<BluetoothGattCharacteristic> allCharacteristics = gattService.getCharacteristics();
-                    List<BluetoothGattCharacteristic> RDKCharacteristics = new ArrayList<BluetoothGattCharacteristic>();
-                    List<BluetoothGattDescriptor> RDKDescriptors = new ArrayList<BluetoothGattDescriptor>();
-
-                    //Find all Report characteristics
-                    for (BluetoothGattCharacteristic characteristic : allCharacteristics) {
-                        if (characteristic.getUuid().equals(UUIDDatabase.UUID_REPORT)) {
-                            RDKCharacteristics.add(characteristic);
-                        }
-                    }
-
-                    //Find all Report descriptors
-                    for (BluetoothGattCharacteristic rdkcharacteristic : RDKCharacteristics) {
-                        List<BluetoothGattDescriptor> descriptors = rdkcharacteristic.
-                                getDescriptors();
-                        for (BluetoothGattDescriptor descriptor : descriptors) {
-                            RDKDescriptors.add(descriptor);
-                        }
-                    }
-                    /**
-                     * Wait for all  descriptors to receive
-                     */
-                    if (RDKDescriptors.size() == RDKCharacteristics.size() * 2) {
-
-                        for (int pos = 0, descPos = 0; descPos < RDKCharacteristics.size(); pos++, descPos++) {
-                            BluetoothGattCharacteristic rdkCharacteristic = RDKCharacteristics.get(descPos);
-                            //Mapping the characteristic and descriptors
-                            BluetoothGattDescriptor clientdescriptor = RDKDescriptors.get(pos);
-                            BluetoothGattDescriptor reportdescriptor = RDKDescriptors.get(pos + 1);
-                            if (!rdkCharacteristic.getDescriptors().contains(clientdescriptor)) {
-                                rdkCharacteristic.addDescriptor(clientdescriptor);
-                            }
-                            if (!rdkCharacteristic.getDescriptors().contains(reportdescriptor)) {
-                                rdkCharacteristic.addDescriptor(reportdescriptor);
-                            }
-                            pos++;
-                        }
-                    }
-                    currentServiceData.put(LIST_UUID, gattService);
-                    mGattServiceMasterData.add(currentServiceData);
-                    mGattServiceData.add(currentServiceData);
-                } else {
-                    currentServiceData.put(LIST_UUID, gattService);
-                    mGattServiceMasterData.add(currentServiceData);
-                    mGattServiceData.add(currentServiceData);
-                }
-            } else {
-                currentServiceData.put(LIST_UUID, gattService);
-                mGattServiceMasterData.add(currentServiceData);
-                mGattServiceData.add(currentServiceData);
-            }
         }
     }
 
