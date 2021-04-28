@@ -147,9 +147,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                     } else {
                         // this is where it goes after initial connect
                         if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
-                            mHasPairedSuccessfully = true;
-                            mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
-//                            BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
+                            BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
                         } else {
                             BluetoothLeService.getRemoteDevice().createBond();
                         }
@@ -158,8 +156,8 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                     // wait for connection...
                 } else if (intent.getAction().equals(ACTION_GATT_DISCONNECTING)) {
                     // wait for disconnection...
-                } else if (intent.getAction().equals(ACTION_GATT_DISCONNECTED) && mIsFotaInProgress) {
-                    OTAFinished(mContext, ACTION_OTA_FAIL, "Device disconnected unexpectedly during FOTA.");
+                } else if (intent.getAction().equals(ACTION_GATT_DISCONNECTED)) {
+                    // do nothing for now, it can get disconnected when re-pairing
                 } else if (intent.getAction().equals(ACTION_GATT_SERVICES_DISCOVERED )&& !mIsFotaInProgress) {
                     // services has been discovered and it has been paired, start fota process
                     mIsFotaInProgress = true;
