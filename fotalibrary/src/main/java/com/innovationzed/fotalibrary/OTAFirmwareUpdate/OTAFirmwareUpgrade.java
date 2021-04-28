@@ -66,7 +66,11 @@ import static android.bluetooth.BluetoothDevice.BOND_BONDED;
 import static android.bluetooth.BluetoothDevice.BOND_BONDING;
 import static android.bluetooth.BluetoothDevice.BOND_NONE;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_CONNECTED;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_CONNECTING;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_DISCONNECTED;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_DISCONNECTING;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_OTA_FAIL;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_CONNECTED;
 import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
@@ -120,29 +124,46 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         public void onReceive(Context context, Intent intent) {
             synchronized (this) {
                 if (intent.getAction().equals(ACTION_BOND_STATE_CHANGED)){
-                    if (mIsFotaInProgress){
-                        if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDING) {
-                            // Do nothing, waiting for bonding to complete
-                            mIsBonded = true;
-                        } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && !mIsBonded){
-                            BluetoothLeService.getRemoteDevice().createBond();
-                        } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && mIsBonded){
-                            OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not pair with device. Possible reasons: user did not approve pairing request or device was not in boot mode.");
-                        } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDED && mIsBonded){
-                            mHasPairedSuccessfully = true;
-                            if (BluetoothLeService.getConnectionState() == STATE_CONNECTED && !mServiceDiscoveryStarted) {
-                                mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
-                            } else { // if it is paired but not currently connected
-                                BluetoothLeService.connect(FotaApi.macAddress, context);
-                            }
+                    if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDING) {
+                        // Do nothing, waiting for bonding to complete
+                        mIsBonded = true;
+                    } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && !mIsBonded){
+                        BluetoothLeService.getRemoteDevice().createBond();
+                    } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && mIsBonded){
+                        OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not pair with device. Possible reasons: user did not approve pairing request or device was not in boot mode.");
+                    } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDED && mIsBonded){
+                        mHasPairedSuccessfully = true;
+                        if (BluetoothLeService.getConnectionState() == STATE_CONNECTED && !mServiceDiscoveryStarted) {
+                            mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
+                        } else { // if it is paired but not currently connected
+                            BluetoothLeService.connect(FotaApi.macAddress, context);
                         }
                     }
-                } else if (intent.getAction().equals(ACTION_GATT_CONNECTED) && mHasPairedSuccessfully && !mServiceDiscoveryStarted) {
-                    // if it is paired and now connected we should discover services
-                    mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
-                } else if (intent.getAction().equals(ACTION_GATT_SERVICES_DISCOVERED) && mHasPairedSuccessfully) {
+                } else if (intent.getAction().equals(ACTION_GATT_CONNECTED)) {
+                    if (mHasPairedSuccessfully && !mServiceDiscoveryStarted) {
+                        // if it is paired and connected we should discover services
+                        mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
+                    } else {
+                        // this is where it goes after initial connect
+                        if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
+                            mHasPairedSuccessfully = true;
+                            mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
+                        } else {
+                            BluetoothLeService.getRemoteDevice().createBond();
+                        }
+                    }
+                } else if (intent.getAction().equals(ACTION_GATT_CONNECTING)) {
+                    // wait for connection...
+                } else if (intent.getAction().equals(ACTION_GATT_DISCONNECTING)) {
+                    // wait for disconnection...
+                } else if (intent.getAction().equals(ACTION_GATT_DISCONNECTED)) {
+                    OTAFinished(mContext, ACTION_OTA_FAIL, "Device disconnected unexpectedly.");
+                } else if (intent.getAction().equals(ACTION_GATT_SERVICES_DISCOVERED)) {
                     // services has been discovered and it has been paired, start fota process
+                    mIsFotaInProgress = true;
                     doFota();
+                } else if (intent.getAction().equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL) && mHasPairedSuccessfully) {
+                        OTAFinished(mContext, ACTION_OTA_FAIL, "Service discovery unsuccessful");
                 } else {
                     processOTAStatus(intent);
                 }
@@ -162,7 +183,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     @Override
     public void onCreate() {
         mContext = this;
-        mIsFotaInProgress = true;
         mIsBonded = false;
         mOTAResponseReceiverV1 = new OTAResponseReceiver_v1();
         mOTAResponseReceiverV0 = new OTAResponseReceiver_v0();
@@ -174,29 +194,15 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         mTimeoutRunnable = new Runnable(){
             @Override
             public void run() {
-                if (!mHasPairedSuccessfully){
+                if (!mIsFotaInProgress){
                     OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Timeout/disconnect");
                 }
             }
         };
         mTimeoutHandler.postDelayed(mTimeoutRunnable, 60000);
 
-        BluetoothLeService.connect(FotaApi.macAddress, this);
-        try {
-            Thread.sleep(1500);
-        } catch (Exception e) {
-
-        }
-
-        if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
-            mHasPairedSuccessfully = true;
-            if (BluetoothLeService.getConnectionState() == STATE_CONNECTED) {
-                mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
-            } else { // if it is paired but not currently connected
-                BluetoothLeService.connect(FotaApi.macAddress, this);
-            }
-        } else {
-            BluetoothLeService.getRemoteDevice().createBond();
+        if (!BluetoothLeService.connect(FotaApi.macAddress, this)){
+            OTAFinished(this, ACTION_OTA_FAIL, "Initial connection to device failed");
         }
     }
 
