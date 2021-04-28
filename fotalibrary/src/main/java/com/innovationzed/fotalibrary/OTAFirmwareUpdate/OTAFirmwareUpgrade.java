@@ -73,6 +73,7 @@ import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeSer
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_OTA_FAIL;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_CONNECTED;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.getBluetoothDeviceAddress;
 import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
 
 /**
@@ -148,6 +149,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                         if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
                             mHasPairedSuccessfully = true;
                             mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
+//                            BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
                         } else {
                             BluetoothLeService.getRemoteDevice().createBond();
                         }
@@ -156,8 +158,8 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                     // wait for connection...
                 } else if (intent.getAction().equals(ACTION_GATT_DISCONNECTING)) {
                     // wait for disconnection...
-                } else if (intent.getAction().equals(ACTION_GATT_DISCONNECTED)) {
-                    OTAFinished(mContext, ACTION_OTA_FAIL, "Device disconnected unexpectedly.");
+                } else if (intent.getAction().equals(ACTION_GATT_DISCONNECTED) && mIsFotaInProgress) {
+                    OTAFinished(mContext, ACTION_OTA_FAIL, "Device disconnected unexpectedly during FOTA.");
                 } else if (intent.getAction().equals(ACTION_GATT_SERVICES_DISCOVERED )&& !mIsFotaInProgress) {
                     // services has been discovered and it has been paired, start fota process
                     mIsFotaInProgress = true;
@@ -363,6 +365,8 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     public static void OTAFinished(Context context, String action, String reason){
         mIsFotaInProgress = false;
         mHasPairedSuccessfully = false;
+        mServiceDiscoveryStarted = false;
+        mIsBonded = false;
         mTimeoutHandler.removeCallbacks(mTimeoutRunnable);
         Utils.broadcastOTAFinished(context, action, reason);
     }
