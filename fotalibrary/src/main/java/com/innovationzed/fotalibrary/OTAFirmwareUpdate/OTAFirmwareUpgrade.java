@@ -59,8 +59,6 @@ import java.io.StringWriter;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 import static android.bluetooth.BluetoothDevice.ACTION_BOND_STATE_CHANGED;
@@ -81,14 +79,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     public static final String REGEX_MATCHES_CYACD2 = "(?i).*\\.cyacd2$";
     public static final String REGEX_ENDS_WITH_CYACD_OR_CYACD2 = "(?i)\\.cyacd2?$";
     public static boolean mFileUpgradeStarted = false;
-
-    static ArrayList<HashMap<String, BluetoothGattService>> mGattServiceData = new ArrayList<>();
-    static ArrayList<HashMap<String, BluetoothGattService>> mGattServiceFindMeData = new ArrayList<>();
-    static ArrayList<HashMap<String, BluetoothGattService>> mGattServiceProximityData = new ArrayList<HashMap<String, BluetoothGattService>>();
-    private static ArrayList<HashMap<String, BluetoothGattService>> mGattDbServiceData = new ArrayList<HashMap<String, BluetoothGattService>>();
-    private static ArrayList<HashMap<String, BluetoothGattService>> mGattServiceMasterData = new ArrayList<>();
-
-    private static BluetoothGattService mService;
 
     private static OTAFUHandler DUMMY_HANDLER = (OTAFUHandler) Proxy.newProxyInstance(OTAFirmwareUpgrade.class.getClassLoader(), new Class<?>[]{OTAFUHandler.class}, new InvocationHandler() {
         @Override
