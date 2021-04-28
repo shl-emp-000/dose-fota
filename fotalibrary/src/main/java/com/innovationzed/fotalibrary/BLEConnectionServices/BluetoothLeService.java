@@ -93,9 +93,17 @@ public class BluetoothLeService extends Service {
     public final static String ACTION_DATA_AVAILABLE =
             "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
     public final static String ACTION_OTA_DATA_AVAILABLE =
-            "com.cysmart.bluetooth.le.ACTION_OTA_DATA_AVAILABLE";
+            "com.fota.bluetooth.le.ACTION_OTA_DATA_AVAILABLE";
     public final static String ACTION_OTA_DATA_AVAILABLE_V1 =
-            "com.cysmart.bluetooth.le.ACTION_OTA_DATA_AVAILABLE_V1";
+            "com.fota.bluetooth.le.ACTION_OTA_DATA_AVAILABLE_V1";
+    public final static String ACTION_OTA_SUCCESS =
+            "com.fota.bluetooth.le.ACTION_OTA_SUCCESS";
+    public final static String ACTION_OTA_FAIL =
+            "com.fota.bluetooth.le.ACTION_OTA_FAIL";
+    public final static String ACTION_OTA_IS_POSSIBLE =
+            "com.fota.bluetooth.le.ACTION_OTA_IS_POSSIBLE";
+    public final static String ACTION_OTA_IS_NOT_POSSIBLE =
+            "com.fota.bluetooth.le.ACTION_OTA_IS_NOT_POSSIBLE";
     public final static String ACTION_GATT_CHARACTERISTIC_ERROR =
             "com.example.bluetooth.le.ACTION_GATT_CHARACTERISTIC_ERROR";
     public final static String ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL =
