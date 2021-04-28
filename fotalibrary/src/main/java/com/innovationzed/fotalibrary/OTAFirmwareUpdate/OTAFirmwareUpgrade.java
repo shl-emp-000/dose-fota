@@ -158,7 +158,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                     // wait for disconnection...
                 } else if (intent.getAction().equals(ACTION_GATT_DISCONNECTED)) {
                     OTAFinished(mContext, ACTION_OTA_FAIL, "Device disconnected unexpectedly.");
-                } else if (intent.getAction().equals(ACTION_GATT_SERVICES_DISCOVERED)) {
+                } else if (intent.getAction().equals(ACTION_GATT_SERVICES_DISCOVERED )&& !mIsFotaInProgress) {
                     // services has been discovered and it has been paired, start fota process
                     mIsFotaInProgress = true;
                     doFota();
@@ -224,7 +224,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                 OTAFinished(this, ACTION_OTA_FAIL, "Invalid firmware file.");
             }
         } else {
-            OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not connect or discover services of device.");
+            OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not find OTA service.");
         }
 
     }
