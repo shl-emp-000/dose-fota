@@ -36,7 +36,6 @@ package com.innovationzed.fotalibrary.OTAFirmwareUpdate;
 import android.app.Service;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -63,15 +62,12 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
 
 import static android.bluetooth.BluetoothDevice.ACTION_BOND_STATE_CHANGED;
 import static android.bluetooth.BluetoothDevice.BOND_BONDED;
 import static android.bluetooth.BluetoothDevice.BOND_BONDING;
 import static android.bluetooth.BluetoothDevice.BOND_NONE;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_OTA_FAIL;
-import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_CONNECTED;
-import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_DISCONNECTED;
 import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
 
 /**
