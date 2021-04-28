@@ -230,7 +230,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         int state = STATE_DISCONNECTED;
         int n = 0;
         while (n < 10 && state != STATE_CONNECTED){
-            BluetoothLeService.connect(FotaApi.macAddress, "BLE DFU Device", context);
+            BluetoothLeService.connect(FotaApi.macAddress, context);
             long timer = System.currentTimeMillis();
             n++;
             do {
