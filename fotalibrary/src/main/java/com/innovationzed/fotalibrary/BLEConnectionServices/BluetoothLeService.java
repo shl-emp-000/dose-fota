@@ -47,7 +47,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.Resources;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
@@ -94,17 +93,9 @@ public class BluetoothLeService extends Service {
     public final static String ACTION_DATA_AVAILABLE =
             "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
     public final static String ACTION_OTA_DATA_AVAILABLE =
-            "com.fota.bluetooth.le.ACTION_OTA_DATA_AVAILABLE";
+            "com.cysmart.bluetooth.le.ACTION_OTA_DATA_AVAILABLE";
     public final static String ACTION_OTA_DATA_AVAILABLE_V1 =
-            "com.fota.bluetooth.le.ACTION_OTA_DATA_AVAILABLE_V1";
-    public final static String ACTION_OTA_SUCCESS =
-            "com.fota.bluetooth.le.ACTION_OTA_SUCCESS";
-    public final static String ACTION_OTA_FAIL =
-            "com.fota.bluetooth.le.ACTION_OTA_FAIL";
-    public final static String ACTION_OTA_IS_POSSIBLE =
-            "com.fota.bluetooth.le.ACTION_OTA_IS_POSSIBLE";
-    public final static String ACTION_OTA_IS_NOT_POSSIBLE =
-            "com.fota.bluetooth.le.ACTION_OTA_IS_NOT_POSSIBLE";
+            "com.cysmart.bluetooth.le.ACTION_OTA_DATA_AVAILABLE_V1";
     public final static String ACTION_GATT_CHARACTERISTIC_ERROR =
             "com.example.bluetooth.le.ACTION_GATT_CHARACTERISTIC_ERROR";
     public final static String ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL =
@@ -252,7 +243,6 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (descriptor.getValue() != null) {
                     addRemoveData(descriptor);
@@ -270,7 +260,7 @@ public class BluetoothLeService extends Service {
                 } else if (mEnableGlucoseCharacteristicsFlag) {
                     if (mGlucoseCharacteristics.size() > 0) {
                         mGlucoseCharacteristics.remove(0);
-                        //enableAllGlucoseCharacteristics();
+                        enableAllGlucoseCharacteristics();
                     }
                 } else if (mEnableSelectedCharacteristicsFlag) {
                     if (mSelectedCharacteristicsToEnable.size() > 0) {
@@ -297,8 +287,8 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-
             if (status == BluetoothGatt.GATT_SUCCESS) {
+
                 UUID descriptorUUID = descriptor.getUuid();
                 final Intent dataAvailableIntent = new Intent(ACTION_DATA_AVAILABLE);
                 Bundle bundle = new Bundle();
@@ -366,8 +356,9 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+            } else {
 
-            if (status != BluetoothGatt.GATT_SUCCESS) {
                 Intent characteristicErrorIntent = new Intent(ACTION_GATT_CHARACTERISTIC_ERROR);
                 characteristicErrorIntent.putExtra(Constants.EXTRA_CHARACTERISTIC_ERROR_MESSAGE, "" + status);
                 sendGlobalBroadcastIntent(mContext, characteristicErrorIntent);
@@ -407,12 +398,10 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-
             // GATT Characteristic read
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastNotifyUpdate(characteristic);
             } else {
-
                 if (status == BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION
                         || status == BluetoothGatt.GATT_INSUFFICIENT_ENCRYPTION) {
 //                    pairDevice();
@@ -472,8 +461,6 @@ public class BluetoothLeService extends Service {
             status = mBluetoothGatt.requestMtu(mtu);
             retry--;
         }
-
-        Resources res = mContext.getResources();
     }
 
     private final IBinder mBinder = new LocalBinder();
@@ -519,9 +506,54 @@ public class BluetoothLeService extends Service {
                 characteristic.getService().getUuid().toString());
         bundle.putInt(Constants.EXTRA_BYTE_SERVICE_INSTANCE_VALUE,
                 characteristic.getService().getInstanceId());
-
+        // Heart rate Measurement notify value
+        if (characteristic.getUuid().equals(UUIDDatabase.UUID_HEART_RATE_MEASUREMENT)) {
+            if (HRMParser.isValidValue(characteristic)) {
+                String heartRate = HRMParser.getHeartRate(characteristic);
+                String sensorContact = HRMParser.getSensorContactStatus(characteristic);
+                String energyExpended = HRMParser.getEnergyExpended(characteristic);
+                ArrayList<Integer> rrInterval = HRMParser.getRRInterval(characteristic);
+                bundle.putString(Constants.EXTRA_HRM_HEART_RATE_VALUE, heartRate);
+                bundle.putString(Constants.EXTRA_HRM_SENSOR_CONTACT_VALUE, sensorContact);
+                bundle.putString(Constants.EXTRA_HRM_ENERGY_EXPENDED_VALUE, energyExpended);
+                bundle.putIntegerArrayList(Constants.EXTRA_HRM_RR_INTERVAL_VALUE, rrInterval);
+            }
+        }
+        // Health thermometer notify value
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_TEMPERATURE_MEASUREMENT)) {
+            ArrayList<String> htmData = HTMParser.parseTemperatureMeasurement(characteristic, mContext);
+            bundle.putStringArrayList(Constants.EXTRA_HTM_TEMPERATURE_MEASUREMENT_VALUE, htmData);
+        }
+        // Blood pressure measurement notify value
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_BLOOD_PRESSURE_MEASUREMENT)) {
+            String bloodPressureSystolic = BloodPressureParser
+                    .getSystolicBloodPressure(characteristic);
+            String bloodPressureDiastolic = BloodPressureParser
+                    .getDiastolicBloodPressure(characteristic);
+            String bloodPressureSystolicUnit = BloodPressureParser
+                    .getSystolicBloodPressureUnit(characteristic, mContext);
+            String bloodPressureDiastolicUnit = BloodPressureParser
+                    .getDiaStolicBloodPressureUnit(characteristic, mContext);
+            bundle.putString(
+                    Constants.EXTRA_PRESURE_SYSTOLIC_UNIT_VALUE,
+                    bloodPressureSystolicUnit);
+            bundle.putString(
+                    Constants.EXTRA_PRESURE_DIASTOLIC_UNIT_VALUE,
+                    bloodPressureDiastolicUnit);
+            bundle.putString(
+                    Constants.EXTRA_PRESURE_SYSTOLIC_VALUE,
+                    bloodPressureSystolic);
+            bundle.putString(
+                    Constants.EXTRA_PRESURE_DIASTOLIC_VALUE,
+                    bloodPressureDiastolic);
+        }
+        // Cycling speed Measurement notify value
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_CSC_MEASURE)) {
+            ArrayList<String> cscValues = CSCParser.getCyclingSpeedCadence(characteristic);
+            bundle.putStringArrayList(Constants.EXTRA_CSC_VALUE, cscValues);
+        }
         //RDK characteristic
-        if (characteristic.getUuid().equals(UUIDDatabase.UUID_REPORT)) {
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_REPORT)) {
             BluetoothGattDescriptor descriptor = characteristic.getDescriptor
                     (UUIDDatabase.UUID_REPORT_REFERENCE);
             if (descriptor != null) {
@@ -547,6 +579,11 @@ public class BluetoothLeService extends Service {
             otaDataAvailableIntent.putExtras(bundle);
             // NOTE: sending GLOBAL broadcast as there are receivers in AndroidManifest.xml which listen to ACTION_OTA_DATA_AVAILABLE_V1 and ACTION_OTA_DATA_AVAILABLE intents
             sendGlobalBroadcastIntent(mContext, otaDataAvailableIntent);
+        }
+        // Body sensor location read value
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_BODY_SENSOR_LOCATION)) {
+            bundle.putString(Constants.EXTRA_HRM_BODY_SENSOR_LOCATION_VALUE,
+                    HRMParser.getBodySensorLocation(characteristic, mContext));
         }
         // Manufacturer Name read value
         else if (characteristic.getUuid().equals(UUIDDatabase.UUID_MANUFACTURER_NAME)) {
@@ -598,6 +635,31 @@ public class BluetoothLeService extends Service {
             bundle.putString(Constants.EXTRA_BTL_VALUE,
                     Utils.getBatteryLevel(characteristic));
         }
+        // Health thermometer sensor location read value
+        else if (characteristic.getUuid()
+                .equals(UUIDDatabase.UUID_TEMPERATURE_TYPE)) {
+            bundle.putString(Constants.EXTRA_HTM_TEMPERATURE_TYPE_VALUE, HTMParser
+                    .parseTemperatureType(characteristic, mContext));
+        }
+        // CapSense proximity read value
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_CAPSENSE_PROXIMITY) ||
+                characteristic.getUuid().equals(UUIDDatabase.UUID_CAPSENSE_PROXIMITY_CUSTOM)) {
+            bundle.putInt(Constants.EXTRA_CAPPROX_VALUE,
+                    CapSenseParser.getCapSenseProximity(characteristic));
+        }
+        // CapSense slider read value
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_CAPSENSE_SLIDER) ||
+                characteristic.getUuid().equals(UUIDDatabase.UUID_CAPSENSE_SLIDER_CUSTOM)) {
+            bundle.putInt(Constants.EXTRA_CAPSLIDER_VALUE,
+                    CapSenseParser.getCapSenseSlider(characteristic));
+        }
+        // CapSense buttons read value
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_CAPSENSE_BUTTONS) ||
+                characteristic.getUuid().equals(UUIDDatabase.UUID_CAPSENSE_BUTTONS_CUSTOM)) {
+            bundle.putIntegerArrayList(
+                    Constants.EXTRA_CAPBUTTONS_VALUE,
+                    CapSenseParser.getCapSenseButtons(characteristic));
+        }
         // Alert level read value
         else if (characteristic.getUuid().equals(UUIDDatabase.UUID_ALERT_LEVEL)) {
             bundle.putString(Constants.EXTRA_ALERT_VALUE,
@@ -608,6 +670,119 @@ public class BluetoothLeService extends Service {
                 .equals(UUIDDatabase.UUID_TRANSMISSION_POWER_LEVEL)) {
             bundle.putInt(Constants.EXTRA_POWER_VALUE,
                     Utils.getTransmissionPower(characteristic));
+        }
+        // RGB LED read value
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_RGB_LED) ||
+                characteristic.getUuid().equals(UUIDDatabase.UUID_RGB_LED_CUSTOM)) {
+            bundle.putString(Constants.EXTRA_RGB_VALUE,
+                    RGBParser.getRGBAString(characteristic));
+        }
+        // Glucose Measurement value
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_GLUCOSE_MEASUREMENT)
+                || characteristic.getUuid().equals(UUIDDatabase.UUID_GLUCOSE_MEASUREMENT_CONTEXT)) {
+            bundle.putSparseParcelableArray(Constants.EXTRA_GLUCOSE_MEASUREMENT,
+                    GlucoseParser.getGlucoseMeasurement(characteristic));
+        }
+//        // Glucose Measurement Context value
+//        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_GLUCOSE_MEASUREMENT_CONTEXT)) {
+//            mBundle.putSparseParcelableArray(Constants.EXTRA_GLUCOSE_MEASUREMENT_CONTEXT,
+//                    GlucoseParser.getGlucoseMeasurement(characteristic));
+//        }
+        // Glucose RACP
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_RECORD_ACCESS_CONTROL_POINT)) {
+            GlucoseParser.onCharacteristicIndicated(characteristic);
+        }
+        // Running speed read value
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_RSC_MEASURE)) {
+            bundle.putStringArrayList(Constants.EXTRA_RSC_VALUE,
+                    RSCParser.getRunningSpeedAndCadence(characteristic));
+        }
+        // Accelerometer X read value
+        else if (characteristic.getUuid()
+                .equals(UUIDDatabase.UUID_ACCELEROMETER_READING_X)) {
+            bundle.putInt(Constants.EXTRA_ACCX_VALUE, SensorHubParser
+                    .getAcceleroMeterXYZReading(characteristic));
+        }
+        // Accelerometer Y read value
+        else if (characteristic.getUuid()
+                .equals(UUIDDatabase.UUID_ACCELEROMETER_READING_Y)) {
+            bundle.putInt(Constants.EXTRA_ACCY_VALUE, SensorHubParser
+                    .getAcceleroMeterXYZReading(characteristic));
+        }
+        // Accelerometer Z read value
+        else if (characteristic.getUuid()
+                .equals(UUIDDatabase.UUID_ACCELEROMETER_READING_Z)) {
+            bundle.putInt(Constants.EXTRA_ACCZ_VALUE, SensorHubParser
+                    .getAcceleroMeterXYZReading(characteristic));
+        }
+        // Temperature read value
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_TEMPERATURE_READING)) {
+            bundle.putFloat(Constants.EXTRA_STEMP_VALUE,
+                    SensorHubParser
+                            .getThermometerReading(characteristic));
+        }
+        // Barometer read value
+        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_BAROMETER_READING)) {
+            bundle.putInt(Constants.EXTRA_SPRESSURE_VALUE,
+                    SensorHubParser.getBarometerReading(characteristic));
+        }
+        // Accelerometer scan interval read value
+        else if (characteristic.getUuid()
+                .equals(UUIDDatabase.UUID_ACCELEROMETER_SENSOR_SCAN_INTERVAL)) {
+            bundle.putInt(
+                    Constants.EXTRA_ACC_SENSOR_SCAN_VALUE,
+                    SensorHubParser
+                            .getSensorScanIntervalReading(characteristic));
+        }
+        // Accelerometer analog sensor read value
+        else if (characteristic.getUuid()
+                .equals(UUIDDatabase.UUID_ACCELEROMETER_ANALOG_SENSOR)) {
+            bundle.putInt(Constants.EXTRA_ACC_SENSOR_TYPE_VALUE,
+                    SensorHubParser
+                            .getSensorTypeReading(characteristic));
+        }
+        // Accelerometer data accumulation read value
+        else if (characteristic.getUuid()
+                .equals(UUIDDatabase.UUID_ACCELEROMETER_DATA_ACCUMULATION)) {
+            bundle.putInt(Constants.EXTRA_ACC_FILTER_VALUE,
+                    SensorHubParser
+                            .getFilterConfiguration(characteristic));
+        }
+        // Temperature sensor scan read value
+        else if (characteristic.getUuid()
+                .equals(UUIDDatabase.UUID_TEMPERATURE_SENSOR_SCAN_INTERVAL)) {
+            bundle.putInt(
+                    Constants.EXTRA_STEMP_SENSOR_SCAN_VALUE,
+                    SensorHubParser
+                            .getSensorScanIntervalReading(characteristic));
+        }
+        // Temperature analog sensor read value
+        else if (characteristic.getUuid()
+                .equals(UUIDDatabase.UUID_TEMPERATURE_ANALOG_SENSOR)) {
+            bundle.putInt(Constants.EXTRA_STEMP_SENSOR_TYPE_VALUE,
+                    SensorHubParser
+                            .getSensorTypeReading(characteristic));
+        }
+        // Barometer sensor scan interval read value
+        else if (characteristic.getUuid()
+                .equals(UUIDDatabase.UUID_BAROMETER_SENSOR_SCAN_INTERVAL)) {
+            bundle.putInt(
+                    Constants.EXTRA_SPRESSURE_SENSOR_SCAN_VALUE,
+                    SensorHubParser
+                            .getSensorScanIntervalReading(characteristic));
+        }
+        // Barometer digital sensor
+        else if (characteristic.getUuid()
+                .equals(UUIDDatabase.UUID_BAROMETER_DIGITAL_SENSOR)) {
+            bundle.putInt(Constants.EXTRA_SPRESSURE_SENSOR_TYPE_VALUE,
+                    SensorHubParser
+                            .getSensorTypeReading(characteristic));
+        }
+        // Barometer threshold for indication read value
+        else if (characteristic.getUuid()
+                .equals(UUIDDatabase.UUID_BAROMETER_THRESHOLD_FOR_INDICATION)) {
+            bundle.putInt(Constants.EXTRA_SPRESSURE_THRESHOLD_VALUE,
+                    SensorHubParser.getThresholdValue(characteristic));
         }
 
         dataAvailableIntent.putExtras(bundle);
@@ -655,7 +830,6 @@ public class BluetoothLeService extends Service {
         mBluetoothDeviceName = deviceName;
         mClearCacheOnDisconnect = Utils.getBooleanSharedPreference(mContext, Constants.PREF_CLEAR_CACHE_ON_DISCONNECT);
         mUnpairOnDisconnect = Utils.getBooleanSharedPreference(mContext, Constants.PREF_UNPAIR_ON_DISCONNECT);
-
     }
 
     /**
@@ -742,6 +916,10 @@ public class BluetoothLeService extends Service {
                 || (characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_READ) == 0) {
             return;
         }
+        String serviceUUID = characteristic.getService().getUuid().toString();
+        String serviceName = GattAttributes.lookupUUID(characteristic.getService().getUuid(), serviceUUID);
+        String characteristicUUID = characteristic.getUuid().toString();
+        String characteristicName = GattAttributes.lookupUUID(characteristic.getUuid(), characteristicUUID);
         mBluetoothGatt.readCharacteristic(characteristic);
     }
 
@@ -755,6 +933,22 @@ public class BluetoothLeService extends Service {
             return;
         }
         mBluetoothGatt.readDescriptor(descriptor);
+    }
+
+    /**
+     * Request a write with no response on a given
+     * {@code BluetoothGattCharacteristic}.
+     *
+     * @param characteristic
+     * @param byteArray      to write
+     */
+    public static void writeCharacteristicNoResponse(BluetoothGattCharacteristic characteristic, byte[] byteArray) {
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+            return;
+        } else {
+            characteristic.setValue(byteArray);
+            mBluetoothGatt.writeCharacteristic(characteristic);
+        }
     }
 
     public static void writeOTABootLoaderCommand(BluetoothGattCharacteristic characteristic, byte[] value, boolean isExitBootloaderCmd) {
@@ -842,7 +1036,6 @@ public class BluetoothLeService extends Service {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             return;
         }
-
         characteristic.setValue(value);
         int counter = 20;
         boolean status;
@@ -947,7 +1140,6 @@ public class BluetoothLeService extends Service {
                 mBluetoothGatt.writeDescriptor(descriptor);
             }
         }
-
         mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
     }
 
@@ -977,7 +1169,6 @@ public class BluetoothLeService extends Service {
                 mBluetoothGatt.writeDescriptor(descriptor);
             }
         }
-
         mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
     }
 
@@ -1079,6 +1270,23 @@ public class BluetoothLeService extends Service {
         } else {
             Utils.debug("RDK characteristics: all enabled");
             mEnableRDKCharacteristicsFlag = false;
+            broadcastWriteStatusUpdate(ACTION_WRITE_COMPLETED);
+        }
+    }
+
+    public static void enableAllGlucoseCharacteristics() {
+        if (mGlucoseCharacteristics.size() > 0) {
+            mEnableGlucoseCharacteristicsFlag = true;
+            BluetoothGattCharacteristic c = mGlucoseCharacteristics.get(0);
+            Utils.debug("Glucose characteristics: enabling characteristic " + c.getUuid());
+            if (c.getUuid().equals(UUIDDatabase.UUID_RECORD_ACCESS_CONTROL_POINT)) {
+                setCharacteristicIndication(c, true);
+            } else {
+                setCharacteristicNotification(c, true);
+            }
+        } else {
+            Utils.debug("Glucose characteristics: all enabled");
+            mEnableGlucoseCharacteristicsFlag = false;
             broadcastWriteStatusUpdate(ACTION_WRITE_COMPLETED);
         }
     }
