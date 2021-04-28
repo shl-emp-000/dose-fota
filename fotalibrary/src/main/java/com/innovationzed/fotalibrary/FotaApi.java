@@ -43,6 +43,7 @@ public class FotaApi {
     private BackendApiRequest mBackend;
 
     private boolean mUpdatePossible;
+    private boolean mHasPostedToBackend;
 
     private BroadcastReceiver mOTAStatusReceiver = new BroadcastReceiver() {
         @Override
@@ -60,7 +61,10 @@ public class FotaApi {
                     if (bundle.containsKey(OTA_REASON)){
                         reason = bundle.getString(OTA_REASON);
                     }
-                    mBackend.postFotaResult(success, reason);
+                    if (!mHasPostedToBackend) {
+                        mBackend.postFotaResult(success, reason);
+                        mHasPostedToBackend = true;
+                    }
                     mContext.stopService(mOTAServiceIntent);
                     mContext.stopService(mBluetoothLeServiceIntent);
                 }
@@ -76,6 +80,7 @@ public class FotaApi {
     public FotaApi (Context context, String macAddress){
         this.macAddress = macAddress;
 
+        mHasPostedToBackend = true;
         mContext = context;
         mOTAServiceIntent = new Intent(mContext, OTAFirmwareUpgrade.class);
         mBluetoothLeServiceIntent = new Intent(mContext, BluetoothLeService.class);
@@ -121,6 +126,7 @@ public class FotaApi {
      */
     public void doFirmwareUpdate(boolean userConfirmation){
         if (userConfirmation && mUpdatePossible){
+            mHasPostedToBackend = false;
             mContext.startService(mBluetoothLeServiceIntent);
             mContext.startService(mOTAServiceIntent);
         }
