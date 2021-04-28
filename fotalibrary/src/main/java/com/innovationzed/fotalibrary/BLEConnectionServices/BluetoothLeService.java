@@ -60,7 +60,6 @@ import com.innovationzed.fotalibrary.CommonUtils.Constants;
 import com.innovationzed.fotalibrary.CommonUtils.GattAttributes;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
-import com.innovationzed.fotalibrary.FotaApi;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -1234,36 +1233,24 @@ public class BluetoothLeService extends Service {
     }
 
     /**
-     * Connects to device and tries to find a specific gatt service by uuid
+     * Tries to find a specific gatt service by uuid
      * (returns null if the service is not found)
-     * @param context
      * @param uuidService
      * @return
      */
-    public static BluetoothGattService getService(Context context, UUID uuidService){
-        // TODO: refactor solution to use the actions broadcasted in onConnectionStateChange and onServicesDiscovered
-        BluetoothLeService.connect(FotaApi.macAddress, context);
-        try{
-            Thread.sleep(1500);
-            boolean result = BluetoothLeService.discoverServices();
-            Thread.sleep(1500);
-            if (result) {
-                List<BluetoothGattService> supportedServices = BluetoothLeService.getSupportedGattServices();
+    public static BluetoothGattService getService(UUID uuidService){
+        List<BluetoothGattService> supportedServices = BluetoothLeService.getSupportedGattServices();
 
-                if (supportedServices.size() > 0) {
-                    ArrayList<HashMap<String, BluetoothGattService>> gattServiceData = prepareData(supportedServices);
+        if (supportedServices.size() > 0) {
+            ArrayList<HashMap<String, BluetoothGattService>> gattServiceData = prepareData(supportedServices);
 
-                    // Find the gatt service
-                    for (HashMap<String, BluetoothGattService> item : gattServiceData) {
-                        BluetoothGattService gattService = item.get("UUID");
-                        if (gattService.getUuid().equals(uuidService)) {
-                            return item.get("UUID");
-                        }
-                    }
+            // Find the gatt service
+            for (HashMap<String, BluetoothGattService> item : gattServiceData) {
+                BluetoothGattService gattService = item.get("UUID");
+                if (gattService.getUuid().equals(uuidService)) {
+                    return item.get("UUID");
                 }
             }
-        } catch (Exception e) {
-            return null;
         }
         return null;
     }

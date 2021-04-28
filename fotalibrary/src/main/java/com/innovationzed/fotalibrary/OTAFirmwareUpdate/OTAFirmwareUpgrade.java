@@ -65,7 +65,10 @@ import static android.bluetooth.BluetoothDevice.ACTION_BOND_STATE_CHANGED;
 import static android.bluetooth.BluetoothDevice.BOND_BONDED;
 import static android.bluetooth.BluetoothDevice.BOND_BONDING;
 import static android.bluetooth.BluetoothDevice.BOND_NONE;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_CONNECTED;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_OTA_FAIL;
+import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_CONNECTED;
 import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
 
 /**
@@ -107,6 +110,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     private static boolean mIsBonded = false;
     private static boolean mIsFotaInProgress = false;
     private static boolean mHasPairedSuccessfully = false;
+    private static boolean mServiceDiscoveryStarted = false;
 
     private static Handler mTimeoutHandler;
     private static Runnable mTimeoutRunnable;
@@ -126,14 +130,19 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                             OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not pair with device. Possible reasons: user did not approve pairing request or device was not in boot mode.");
                         } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDED && mIsBonded){
                             mHasPairedSuccessfully = true;
-                            mOtaService = BluetoothLeService.getService(mContext, UUIDDatabase.UUID_OTA_UPDATE_SERVICE);
-                            if(mOtaService != null){
-                                doFota();
-                            } else {
-                                OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not connect or discover services of device.");
+                            if (BluetoothLeService.getConnectionState() == STATE_CONNECTED && !mServiceDiscoveryStarted) {
+                                mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
+                            } else { // if it is paired but not currently connected
+                                BluetoothLeService.connect(FotaApi.macAddress, context);
                             }
                         }
                     }
+                } else if (intent.getAction().equals(ACTION_GATT_CONNECTED) && mHasPairedSuccessfully && !mServiceDiscoveryStarted) {
+                    // if it is paired and now connected we should discover services
+                    mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
+                } else if (intent.getAction().equals(ACTION_GATT_SERVICES_DISCOVERED) && mHasPairedSuccessfully) {
+                    // services has been discovered and it has been paired, start fota process
+                    doFota();
                 } else {
                     processOTAStatus(intent);
                 }
@@ -180,27 +189,38 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         }
 
         if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
-            BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
+            mHasPairedSuccessfully = true;
+            if (BluetoothLeService.getConnectionState() == STATE_CONNECTED) {
+                mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
+            } else { // if it is paired but not currently connected
+                BluetoothLeService.connect(FotaApi.macAddress, this);
+            }
         } else {
             BluetoothLeService.getRemoteDevice().createBond();
         }
     }
 
     private void doFota(){
-        OTAFirmwareUpgrade.mOtaCharacteristic = getGattData();
-        if (OTAFirmwareUpgrade.mOtaCharacteristic == null){
-            OTAFinished(this, ACTION_OTA_FAIL, "getGattData() failed (OTAFirmwareUpgrade.mOtaCharacteristic is null)");
+        mOtaService = BluetoothLeService.getService(UUIDDatabase.UUID_OTA_UPDATE_SERVICE);
+        if(mOtaService != null){
+            OTAFirmwareUpgrade.mOtaCharacteristic = getGattData();
+            if (OTAFirmwareUpgrade.mOtaCharacteristic == null){
+                OTAFinished(this, ACTION_OTA_FAIL, "getGattData() failed (OTAFirmwareUpgrade.mOtaCharacteristic is null)");
+            }
+
+            boolean isCyacd2File = DOWNLOADED_FIRMWARE_DIR != null && isCyacd2File(DOWNLOADED_FIRMWARE_DIR);
+            Utils.setBooleanSharedPreference(this, Constants.PREF_IS_CYACD2_FILE, isCyacd2File);
+            mOTAFUHandler = new OTAFUHandler_v1(this, OTAFirmwareUpgrade.mOtaCharacteristic, DOWNLOADED_FIRMWARE_DIR, this);
+
+            try {
+                mOTAFUHandler.prepareFileWrite();
+            } catch (Exception e) {
+                OTAFinished(this, ACTION_OTA_FAIL, "Invalid firmware file.");
+            }
+        } else {
+            OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not connect or discover services of device.");
         }
 
-        boolean isCyacd2File = DOWNLOADED_FIRMWARE_DIR != null && isCyacd2File(DOWNLOADED_FIRMWARE_DIR);
-        Utils.setBooleanSharedPreference(this, Constants.PREF_IS_CYACD2_FILE, isCyacd2File);
-        mOTAFUHandler = new OTAFUHandler_v1(this, OTAFirmwareUpgrade.mOtaCharacteristic, DOWNLOADED_FIRMWARE_DIR, this);
-
-        try {
-            mOTAFUHandler.prepareFileWrite();
-        } catch (Exception e) {
-            OTAFinished(this, ACTION_OTA_FAIL, "Invalid firmware file.");
-        }
     }
 
     private void processOTAStatus(Intent intent) {
