@@ -1,9 +1,10 @@
-package com.innovationzed.fotalibrary.CommonUtils;
+package com.innovationzed.fotalibrary.BackendCommunication;
 
 import android.content.Context;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.innovationzed.fotalibrary.BackendCommunication.JWThandler;
 import com.innovationzed.fotalibrary.R;
 
 import org.junit.After;

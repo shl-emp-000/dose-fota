@@ -1,4 +1,4 @@
-package com.innovationzed.fotalibrary.CommonUtils;
+package com.innovationzed.fotalibrary.BackendCommunication;
 
 import android.content.Context;
 import android.util.Log;
