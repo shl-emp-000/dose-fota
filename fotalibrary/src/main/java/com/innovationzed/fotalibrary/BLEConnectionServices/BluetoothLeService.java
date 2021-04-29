@@ -55,7 +55,6 @@ import android.os.Looper;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.innovationzed.fotalibrary.BLEProfileDataParserClasses.DescriptorParser;
 import com.innovationzed.fotalibrary.CommonUtils.Constants;
 import com.innovationzed.fotalibrary.CommonUtils.GattAttributes;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
@@ -255,114 +254,6 @@ public class BluetoothLeService extends Service {
         }
 
         @Override
-        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                if (descriptor.getValue() != null) {
-                    addRemoveData(descriptor);
-                }
-
-                if (mDisableEnabledCharacteristicsFlag) {
-                    disableAllEnabledCharacteristics();
-                } else if (mDisableSelectedCharacteristicsFlag) {
-                    disableSelectedCharacteristics();
-                } else if (mEnableRDKCharacteristicsFlag) {
-                    if (mRDKCharacteristics.size() > 0) {
-                        mRDKCharacteristics.remove(0);
-                        enableAllRDKCharacteristics();
-                    }
-                } else if (mEnableSelectedCharacteristicsFlag) {
-                    if (mSelectedCharacteristicsToEnable.size() > 0) {
-                        mSelectedCharacteristicsToEnable.remove(0);
-                        enableSelectedCharacteristics();
-                    }
-                }
-                sendGlobalBroadcastIntent(mContext, new Intent(ACTION_WRITE_SUCCESS));
-            } else {
-                if (status == BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION
-                        || status == BluetoothGatt.GATT_INSUFFICIENT_ENCRYPTION) {
-//                    pairDevice(); // TODO: Android automatically pairs in this case
-                    sendGlobalBroadcastIntent(mContext, new Intent(ACTION_GATT_INSUFFICIENT_ENCRYPTION));
-                } else {
-                    mDisableEnabledCharacteristicsFlag = false;
-                    mEnableRDKCharacteristicsFlag = false;
-                    mEnableGlucoseCharacteristicsFlag = false;
-                    mDisableSelectedCharacteristicsFlag = false;
-                    mEnableSelectedCharacteristicsFlag = false;
-                    sendGlobalBroadcastIntent(mContext, new Intent(ACTION_WRITE_FAILED));
-                }
-            }
-        }
-
-        @Override
-        public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-
-                UUID descriptorUUID = descriptor.getUuid();
-                final Intent dataAvailableIntent = new Intent(ACTION_DATA_AVAILABLE);
-                Bundle bundle = new Bundle();
-
-                // Putting the byte value read for GATT DB
-                bundle.putByteArray(Constants.EXTRA_DESCRIPTOR_BYTE_VALUE, descriptor.getValue());
-                bundle.putInt(Constants.EXTRA_BYTE_DESCRIPTOR_INSTANCE_VALUE, descriptor.getCharacteristic().getInstanceId());
-                bundle.putString(Constants.EXTRA_DESCRIPTOR_BYTE_VALUE_UUID, descriptor.getUuid().toString());
-                bundle.putString(Constants.EXTRA_DESCRIPTOR_BYTE_VALUE_CHARACTERISTIC_UUID, descriptor.getCharacteristic().getUuid().toString());
-
-                if (descriptorUUID.equals(UUIDDatabase.UUID_CLIENT_CHARACTERISTIC_CONFIG)) {
-
-                    String valueReceived = DescriptorParser.getClientCharacteristicConfiguration(descriptor, mContext);
-                    bundle.putString(Constants.EXTRA_DESCRIPTOR_VALUE, valueReceived);
-
-                } else if (descriptorUUID.equals(UUIDDatabase.UUID_CHARACTERISTIC_EXTENDED_PROPERTIES)) {
-
-                    HashMap<String, String> receivedValuesMap = DescriptorParser.getCharacteristicExtendedProperties(descriptor, mContext);
-                    String reliableWriteStatus = receivedValuesMap.get(Constants.FIRST_BIT_KEY_VALUE);
-                    String writeAuxiliaryStatus = receivedValuesMap.get(Constants.SECOND_BIT_KEY_VALUE);
-                    bundle.putString(Constants.EXTRA_DESCRIPTOR_VALUE, reliableWriteStatus + "\n" + writeAuxiliaryStatus);
-
-                } else if (descriptorUUID.equals(UUIDDatabase.UUID_CHARACTERISTIC_USER_DESCRIPTION)) {
-
-                    String description = DescriptorParser.getCharacteristicUserDescription(descriptor);
-                    bundle.putString(Constants.EXTRA_DESCRIPTOR_VALUE, description);
-
-                } else if (descriptorUUID.equals(UUIDDatabase.UUID_SERVER_CHARACTERISTIC_CONFIGURATION)) {
-
-                    String broadcastStatus = DescriptorParser.getServerCharacteristicConfiguration(descriptor, mContext);
-                    bundle.putString(Constants.EXTRA_DESCRIPTOR_VALUE, broadcastStatus);
-
-                } else if (descriptorUUID.equals(UUIDDatabase.UUID_REPORT_REFERENCE)) {
-
-                    ArrayList<String> reportReferenceValues = DescriptorParser.getReportReference(descriptor);
-                    String reportReference;
-                    String reportReferenceType;
-                    if (reportReferenceValues.size() == 2) {
-                        reportReference = reportReferenceValues.get(0);
-                        reportReferenceType = reportReferenceValues.get(1);
-                        bundle.putString(Constants.EXTRA_DESCRIPTOR_REPORT_REFERENCE_ID, reportReference);
-                        bundle.putString(Constants.EXTRA_DESCRIPTOR_REPORT_REFERENCE_TYPE, reportReferenceType);
-                        bundle.putString(Constants.EXTRA_DESCRIPTOR_VALUE, reportReference + "\n" + reportReferenceType);
-                    }
-
-                } else if (descriptorUUID.equals(UUIDDatabase.UUID_CHARACTERISTIC_PRESENTATION_FORMAT)) {
-
-                    String value = DescriptorParser.getCharacteristicPresentationFormat(descriptor, mContext);
-                    bundle.putString(Constants.EXTRA_DESCRIPTOR_VALUE, value);
-
-                }
-                dataAvailableIntent.putExtras(bundle);
-                /**
-                 * Sending the broadcast so that it can be received by
-                 * registered receivers
-                 */
-                sendLocalBroadcastIntent(mContext, dataAvailableIntent);
-            } else {
-                if (status == BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION
-                        || status == BluetoothGatt.GATT_INSUFFICIENT_ENCRYPTION) {
-                    sendGlobalBroadcastIntent(mContext, new Intent(ACTION_GATT_INSUFFICIENT_ENCRYPTION));
-                }
-            }
-        }
-
-        @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
             } else {
@@ -515,25 +406,8 @@ public class BluetoothLeService extends Service {
         bundle.putInt(Constants.EXTRA_BYTE_SERVICE_INSTANCE_VALUE,
                 characteristic.getService().getInstanceId());
 
-        //RDK characteristic
-        if (characteristic.getUuid().equals(UUIDDatabase.UUID_REPORT)) {
-            BluetoothGattDescriptor descriptor = characteristic.getDescriptor
-                    (UUIDDatabase.UUID_REPORT_REFERENCE);
-            if (descriptor != null) {
-                BluetoothLeService.readDescriptor(characteristic.getDescriptor(
-                        UUIDDatabase.UUID_REPORT_REFERENCE));
-                ArrayList<String> reportReferenceValues = DescriptorParser.getReportReference(characteristic.
-                        getDescriptor(UUIDDatabase.UUID_REPORT_REFERENCE));
-                if (reportReferenceValues.size() == 2) {
-                    bundle.putString(Constants.EXTRA_DESCRIPTOR_REPORT_REFERENCE_ID,
-                            reportReferenceValues.get(0));
-                    bundle.putString(Constants.EXTRA_DESCRIPTOR_REPORT_REFERENCE_TYPE,
-                            reportReferenceValues.get(1));
-                }
-            }
-        }
         //case for OTA characteristic received
-        else if (characteristic.getUuid().equals(UUIDDatabase.UUID_OTA_UPDATE_CHARACTERISTIC)) {
+        if (characteristic.getUuid().equals(UUIDDatabase.UUID_OTA_UPDATE_CHARACTERISTIC)) {
             boolean isCyacd2File = Utils.getBooleanSharedPreference(mContext, Constants.PREF_IS_CYACD2_FILE);
             String intentAction = isCyacd2File
                     ? BluetoothLeService.ACTION_OTA_DATA_AVAILABLE_V1
