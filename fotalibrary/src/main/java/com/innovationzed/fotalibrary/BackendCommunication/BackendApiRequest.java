@@ -2,7 +2,6 @@ package com.innovationzed.fotalibrary.BackendCommunication;
 
 import android.content.Context;
 
-import com.innovationzed.fotalibrary.CommonUtils.JWThandler;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
 import com.innovationzed.fotalibrary.FotaApi;
 
