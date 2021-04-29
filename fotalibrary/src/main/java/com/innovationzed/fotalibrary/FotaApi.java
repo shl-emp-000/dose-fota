@@ -44,13 +44,14 @@ public class FotaApi {
 
     private boolean mUpdatePossible;
     private boolean mHasPostedToBackend;
+    private boolean mUserConfirmation;
 
     private BroadcastReceiver mOTAStatusReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             synchronized (this) {
                 final String action = intent.getAction();
-                if (action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) || action.equals(BluetoothLeService.ACTION_OTA_FAIL)){
+                if (mUpdatePossible && mUserConfirmation && (action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) || action.equals(BluetoothLeService.ACTION_OTA_FAIL))){
                     mUpdatePossible = false;
                     Utils.deleteFirmwareFile();
 
@@ -125,13 +126,16 @@ public class FotaApi {
      * - BluetoothLeService.ACTION_OTA_FAIL
      */
     public void doFirmwareUpdate(boolean userConfirmation){
-        if (userConfirmation && mUpdatePossible){
+        mUserConfirmation = userConfirmation;
+        if (mUserConfirmation && mUpdatePossible){
             mHasPostedToBackend = false;
             mContext.startService(mBluetoothLeServiceIntent);
             mContext.startService(mOTAServiceIntent);
         }
         else {
             Utils.deleteFirmwareFile();
+            // This won't be posted to backend, it's just a fail broadcast for the 3rd party app
+            Utils.broadcastOTAFinished(mContext, ACTION_FOTA_FAIL, "Firmware update was not possible or user has not confirmed update.");
         }
 
     }
@@ -254,8 +258,6 @@ public class FotaApi {
      */
     private void broadcast(String action){
         Intent intent = new Intent(action);
-        Bundle bundle = new Bundle();
-        intent.putExtras(bundle);
         BluetoothLeService.sendLocalBroadcastIntent(mContext, intent);
     }
 
