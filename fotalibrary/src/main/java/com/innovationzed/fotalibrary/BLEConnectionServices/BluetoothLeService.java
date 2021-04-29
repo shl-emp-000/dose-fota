@@ -1136,7 +1136,6 @@ public class BluetoothLeService extends Service {
      * @param gattServices
      */
     private static ArrayList<HashMap<String, BluetoothGattService>> prepareData(List<BluetoothGattService> gattServices) {
-        boolean mFindMeSet = false;
         ArrayList<HashMap<String, BluetoothGattService>> gattServiceData = new ArrayList<>();
         if (gattServices == null) {
             return gattServiceData;
