@@ -393,16 +393,15 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                 BluetoothLeService.writeCharacteristicNoResponse(gattCharacteristic, convertedBytes);
             }
             try{
-                Thread.sleep(1000);
+                Thread.sleep(2000);
+                mIsBonded = false;
+                mServiceDiscoveryStarted = false;
+                mCurrentMode = BOOT_MODE;
+                // unpair and pair again after jump to be able to discover OTA service
+                BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
             } catch (Exception e) {
                 OTAFinished(mContext, ACTION_OTA_FAIL, "FOTA failed during jump to boot.");
             }
-
-            mIsBonded = false;
-            mServiceDiscoveryStarted = false;
-            mCurrentMode = BOOT_MODE;
-            // unpair and pair again after jump to be able to discover OTA service
-            BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
         } else {
             OTAFinished(mContext, ACTION_OTA_FAIL, "FOTA failed during jump to boot.");
         }
