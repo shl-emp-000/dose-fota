@@ -73,7 +73,7 @@ import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeSer
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_OTA_FAIL;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_CONNECTED;
-import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.getBluetoothDeviceAddress;
+import static com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase.UUID_IMMEDIATE_ALERT_SERVICE;
 import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
 
 /**
@@ -116,6 +116,9 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     private static boolean mIsFotaInProgress = false;
     private static boolean mHasPairedSuccessfully = false;
     private static boolean mServiceDiscoveryStarted = false;
+    private static final int APP_MODE = 0;
+    private static final int BOOT_MODE = 1;
+    private static int mCurrentMode = APP_MODE;
 
     private static Handler mTimeoutHandler;
     private static Runnable mTimeoutRunnable;
@@ -128,15 +131,17 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                     if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDING) {
                         // Do nothing, waiting for bonding to complete
                         mIsBonded = true;
-                    } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && !mIsBonded){
-                        BluetoothLeService.getRemoteDevice().createBond();
-                    } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && mIsBonded){
-                        OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not pair with device. Possible reasons: user did not approve pairing request or device was not in boot mode.");
-                    } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDED && mIsBonded){
+                    } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE){
+                        if (!mIsBonded){ // hasn't tried to bond yet
+                            BluetoothLeService.getRemoteDevice().createBond();
+                        } else { // has tried to bond and failed
+                            OTAFinished(getApplicationContext(), ACTION_OTA_FAIL, "Could not pair with device. Possible reason: user did not approve pairing request.");
+                        }
+                    } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDED && mIsBonded){ // TODO: is mIsBonded unnecessary here?
                         mHasPairedSuccessfully = true;
                         if (BluetoothLeService.getConnectionState() == STATE_CONNECTED && !mServiceDiscoveryStarted) {
                             mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
-                        } else { // if it is paired but not currently connected
+                        } else { // connect again if it is paired but not currently connected
                             BluetoothLeService.connect(FotaApi.macAddress, context);
                         }
                     }
@@ -147,7 +152,11 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                     } else {
                         // this is where it goes after initial connect
                         if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
-                            BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
+                            if (mCurrentMode == APP_MODE){ // it's already bonded and connected to device in app mode, want to discover service in order to then send immediate alert
+                                mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
+                            } else { // bonded to device in boot mode, want to unpair and pair again in order to be able to discover correct services
+                                BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
+                            }
                         } else {
                             BluetoothLeService.getRemoteDevice().createBond();
                         }
@@ -159,9 +168,13 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                 } else if (intent.getAction().equals(ACTION_GATT_DISCONNECTED)) {
                     // do nothing for now, it can get disconnected when re-pairing
                 } else if (intent.getAction().equals(ACTION_GATT_SERVICES_DISCOVERED )&& !mIsFotaInProgress) {
-                    // services has been discovered and it has been paired, start fota process
-                    mIsFotaInProgress = true;
-                    doFota();
+                    // services has been discovered and it has been paired, jump to boot or do fota
+                    if (mCurrentMode == APP_MODE) {
+                        jumpToBoot();
+                    } else {
+                        mIsFotaInProgress = true;
+                        doFota();
+                    }
                 } else if (intent.getAction().equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL) && mHasPairedSuccessfully) {
                         OTAFinished(mContext, ACTION_OTA_FAIL, "Service discovery unsuccessful");
                 } else {
@@ -365,8 +378,34 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         mHasPairedSuccessfully = false;
         mServiceDiscoveryStarted = false;
         mIsBonded = false;
+        mCurrentMode = APP_MODE;
         mTimeoutHandler.removeCallbacks(mTimeoutRunnable);
         Utils.broadcastOTAFinished(context, action, reason);
+    }
+
+    private void jumpToBoot(){
+        // Send immediate alert to jump to boot
+        BluetoothGattService service = BluetoothLeService.getService(UUID_IMMEDIATE_ALERT_SERVICE);
+        if(service != null){
+            byte[] convertedBytes = Utils.convertingToByteArray("0x01");
+            BluetoothGattCharacteristic gattCharacteristic = service.getCharacteristic(UUIDDatabase.UUID_ALERT_LEVEL);
+            if (gattCharacteristic != null) {
+                BluetoothLeService.writeCharacteristicNoResponse(gattCharacteristic, convertedBytes);
+            }
+            try{
+                Thread.sleep(1000);
+            } catch (Exception e) {
+                OTAFinished(mContext, ACTION_OTA_FAIL, "FOTA failed during jump to boot.");
+            }
+
+            mIsBonded = false;
+            mServiceDiscoveryStarted = false;
+            mCurrentMode = BOOT_MODE;
+            // unpair and pair again after jump to be able to discover OTA service
+            BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
+        } else {
+            OTAFinished(mContext, ACTION_OTA_FAIL, "FOTA failed during jump to boot.");
+        }
     }
 
 }
