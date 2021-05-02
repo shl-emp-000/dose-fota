@@ -66,6 +66,15 @@ import java.util.regex.Pattern;
 
 import okhttp3.ResponseBody;
 
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FAIL;
+//import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_FILE_DOWNLOAD_FAILED;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NO_UPDATE_EXISTS;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_POSSIBLE;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_SUCCESS;
 import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
 
 /**
@@ -307,10 +316,15 @@ public class Utils {
 
     public static IntentFilter makeOTAIntentFilter(){
         final IntentFilter filter = new IntentFilter();
-        filter.addAction(BluetoothLeService.ACTION_OTA_SUCCESS);
-        filter.addAction(BluetoothLeService.ACTION_OTA_FAIL);
-        filter.addAction(BluetoothLeService.ACTION_OTA_IS_POSSIBLE);
-        filter.addAction(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
+        filter.addAction(ACTION_FOTA_SUCCESS);
+        filter.addAction(ACTION_FOTA_FAIL);
+        filter.addAction(ACTION_FOTA_POSSIBLE);
+        filter.addAction(ACTION_FOTA_NO_UPDATE_EXISTS);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_FILE_DOWNLOAD_FAILED);
+//        filter.addAction(ACTION_FOTA_NOT_POSSIBLE);
         return filter;
     }
 

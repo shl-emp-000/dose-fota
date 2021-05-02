@@ -95,14 +95,6 @@ public class BluetoothLeService extends Service {
             "com.fota.bluetooth.le.ACTION_OTA_DATA_AVAILABLE";
     public final static String ACTION_OTA_DATA_AVAILABLE_V1 =
             "com.fota.bluetooth.le.ACTION_OTA_DATA_AVAILABLE_V1";
-    public final static String ACTION_OTA_SUCCESS =
-            "com.fota.bluetooth.le.ACTION_OTA_SUCCESS";
-    public final static String ACTION_OTA_FAIL =
-            "com.fota.bluetooth.le.ACTION_OTA_FAIL";
-    public final static String ACTION_OTA_IS_POSSIBLE =
-            "com.fota.bluetooth.le.ACTION_OTA_IS_POSSIBLE";
-    public final static String ACTION_OTA_IS_NOT_POSSIBLE =
-            "com.fota.bluetooth.le.ACTION_OTA_IS_NOT_POSSIBLE";
     public final static String ACTION_GATT_CHARACTERISTIC_ERROR =
             "com.example.bluetooth.le.ACTION_GATT_CHARACTERISTIC_ERROR";
     public final static String ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL =
@@ -370,7 +362,7 @@ public class BluetoothLeService extends Service {
     /**
      * BlueTooth manager for handling connections
      */
-    private BluetoothManager mBluetoothManager;
+    private static BluetoothManager mBluetoothManager;
 
     public static String getBluetoothDeviceAddress() {
         return mBluetoothDeviceAddress;
@@ -545,6 +537,10 @@ public class BluetoothLeService extends Service {
 
     public static BluetoothDevice getRemoteDevice() {
         return mBluetoothAdapter.getRemoteDevice(mBluetoothDeviceAddress);
+    }
+
+    public static BluetoothDevice getRemoteDevice(String macAddress) {
+        return mBluetoothAdapter.getRemoteDevice(macAddress);
     }
 
     /**
@@ -882,6 +878,10 @@ public class BluetoothLeService extends Service {
         synchronized (mGattCallback) {
             return mConnectionState;
         }
+    }
+
+    public static int getConnectionState(BluetoothDevice device){
+        return mBluetoothManager.getConnectionState(device, BluetoothProfile.GATT);
     }
 
     public static boolean pairDevice(BluetoothDevice device) {

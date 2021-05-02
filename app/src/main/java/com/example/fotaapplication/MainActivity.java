@@ -25,10 +25,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static final int REQUEST_PERMISSION_EXTERNAL_STORAGE = 3;
 
     private FotaApi mFotaApi;
-    private boolean mFirmwareUpdatePossible;
     private boolean mUserWantsToUpdate;
 
-    // Receiver for the 4 possible actions that can be broadcasted from the FotaApi
+    // Receiver for the possible actions that can be broadcasted from the FotaApi
     private BroadcastReceiver mOTAStatusReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -38,11 +37,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     setTextInformation("Firmware update is finished.");
                 } else if (action.equals(FotaApi.ACTION_FOTA_FAIL)){
                     setTextInformation("Firmware update failed.");
+                } else if (action.equals(FotaApi.ACTION_FOTA_COULD_NOT_BE_STARTED)){
+                    setTextInformation("Firmware update could not be started, user did not approve update or isFirmwareUpdatePossible() has not returned ACTION_FOTA_POSSIBLE.");
+                } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED)){
+                    setTextInformation("Required permissions are not granted.");
+                } else if (action.equals(FotaApi.ACTION_FOTA_NO_UPDATE_EXISTS)){
+                    setTextInformation("The device has the latest firmware installed already.");
+                } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION)){
+                    setTextInformation("No wifi connection.");
+                } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE)){
+                    setTextInformation("The phone battery is too low.");
+                } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE)){
+                    setTextInformation("The device battery is too low.");
+                } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE_FILE_DOWNLOAD_FAILED)){
+                    setTextInformation("Downloading the firmware file failed.");
+                } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED)){
+                    setTextInformation("The version check failed.");
                 } else if (action.equals(FotaApi.ACTION_FOTA_POSSIBLE)){
-                    mFirmwareUpdatePossible = true;
                     setTextInformation("Firmware update is possible.");
-                } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE)){
-                    setTextInformation("Firmware update is not possible.");
                 }
             }
         }
@@ -66,7 +78,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         // Anders MAC 00:A0:50:BA:CC:CE
         mFotaApi = new FotaApi(this, "00:A0:50:B4:42:33"); // MAC address is hardcoded at this point
-        mFirmwareUpdatePossible = false;
         mUserWantsToUpdate = false;
 
         // Attach onClickListeners
@@ -96,10 +107,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 setTextInformation("User has " + (mUserWantsToUpdate ? "" : "not ") + "confirmed that they want to update.");
                 break;
             case R.id.buttonFota:
-                if (mFirmwareUpdatePossible){
-                    setTextInformation("Firmware upgrade in progress...");
-                    mFotaApi.doFirmwareUpdate(mUserWantsToUpdate);
-                }
+                setTextInformation("Firmware upgrade in progress...");
+                mFotaApi.doFirmwareUpdate(mUserWantsToUpdate);
                 break;
             default:
                 break;

@@ -51,7 +51,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_OTA_FAIL;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FAIL;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_SUCCESS;
 
 public class OTAFUHandler_v1 extends OTAFUHandlerBase {
 
@@ -103,7 +104,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
                     mFileContents = customFileReader.readLines();
                     startOTA();
                 } catch (CustomFileReader_v1.InvalidFileFormatException e) {
-                    OTAFinished(ACTION_OTA_FAIL, "Invalid firmware file");
+                    OTAFinished(ACTION_FOTA_FAIL, "Invalid firmware file");
                 }
             }
         }, 1000);
@@ -125,7 +126,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
         public void run() {
             try {
                 if (!checkTimeSinceLastOTAStatus()){
-                    OTAFinished(ACTION_OTA_FAIL, "Timeout/device disconnected");
+                    OTAFinished(ACTION_FOTA_FAIL, "Timeout/device disconnected");
                 }
             } finally {
                 // 100% guarantee that this always happens, even if
@@ -159,7 +160,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
                     ++mSyncRetryNum;
                 } else {
                     // Fail
-                    OTAFinished(ACTION_OTA_FAIL, "Error in processOTAStatus: " + extras.getString(Constants.EXTRA_ERROR_OTA));
+                    OTAFinished(ACTION_FOTA_FAIL, "Error in processOTAStatus: " + extras.getString(Constants.EXTRA_ERROR_OTA));
                     return;
                 }
             } else if ((status.equalsIgnoreCase("" + BootLoaderCommands_v1.SEND_DATA)
@@ -181,7 +182,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
 
         // Fail
         if (extras.containsKey(Constants.EXTRA_ERROR_OTA)) {
-            OTAFinished(ACTION_OTA_FAIL, "Error in processOTAStatus: " + extras.getString(Constants.EXTRA_ERROR_OTA));
+            OTAFinished(ACTION_FOTA_FAIL, "Error in processOTAStatus: " + extras.getString(Constants.EXTRA_ERROR_OTA));
             return;
         }
 
@@ -239,7 +240,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
                     Utils.setStringSharedPreference(getContext(), Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands_v1.SET_APP_METADATA);
                 } else {
                     //Wrong SiliconId and SiliconRev
-                    OTAFinished(ACTION_OTA_FAIL, "Error: The SiliconID or SiliconRev does not match");
+                    OTAFinished(ACTION_FOTA_FAIL, "Error: The SiliconID or SiliconRev does not match");
                     return;
                 }
             } else {
@@ -249,7 +250,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
                     processOTAStatus(BEGIN, extras); //Re-try complete flow
                     return;
                 } else {
-                    OTAFinished(ACTION_OTA_FAIL, "Error: Target returned no SiliconID");
+                    OTAFinished(ACTION_FOTA_FAIL, "Error: Target returned no SiliconID");
                     return;
                 }
             }
@@ -279,7 +280,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
                         processOTAStatus(BEGIN, extras); //Re-try complete flow
                         return;
                     } else {
-                        OTAFinished(ACTION_OTA_FAIL, "Error: Verification failed for the programmed application");
+                        OTAFinished(ACTION_FOTA_FAIL, "Error: Verification failed for the programmed application");
                         return;
                     }
                 }
@@ -291,7 +292,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
             BluetoothLeService.disconnect();
             BluetoothLeService.unpairDevice(device);
 
-            OTAFinished(BluetoothLeService.ACTION_OTA_SUCCESS, "Successful firmware update.");
+            OTAFinished(ACTION_FOTA_SUCCESS, "Successful firmware update.");
         }
     }
 
