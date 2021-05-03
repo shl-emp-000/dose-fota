@@ -226,7 +226,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
             }
         } else {
             // Broadcast message saying that FOTA could not be started because the device isn't bonded and connected
-            BluetoothLeService.sendLocalBroadcastIntent(this, new Intent(ACTION_FOTA_COULD_NOT_BE_STARTED));
+            OTAFinished(this, ACTION_FOTA_COULD_NOT_BE_STARTED, "Device is not bonded and connected");
         }
 
     }
@@ -392,6 +392,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         mIsBonded = false;
         mCurrentMode = APP_MODE;
         mTimeoutHandler.removeCallbacks(mTimeoutRunnable);
+        Utils.deleteFirmwareFile();
         Utils.broadcastOTAFinished(context, action, reason);
     }
 

@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 } else if (action.equals(FotaApi.ACTION_FOTA_FAIL)){
                     setTextInformation("Firmware update failed.");
                 } else if (action.equals(FotaApi.ACTION_FOTA_COULD_NOT_BE_STARTED)){
-                    setTextInformation("Firmware update could not be started, user did not approve update, device isn't paired and connected or isFirmwareUpdatePossible() has not returned ACTION_FOTA_POSSIBLE.");
+                    setTextInformation("Firmware update could not be started: isFirmwareUpdatePossible() has not returned ACTION_FOTA_POSSIBLE, user did not approve update or device isn't paired and connected.");
                 } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED)){
                     setTextInformation("Required permissions are not granted.");
                 } else if (action.equals(FotaApi.ACTION_FOTA_NO_UPDATE_EXISTS)){

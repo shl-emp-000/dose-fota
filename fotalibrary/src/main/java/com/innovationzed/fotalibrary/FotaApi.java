@@ -75,7 +75,6 @@ public class FotaApi {
                 final String action = intent.getAction();
                 if (mUpdatePossible && mUserConfirmation && (action.equals(ACTION_FOTA_SUCCESS) || action.equals(ACTION_FOTA_FAIL))){
                     mUpdatePossible = false;
-                    Utils.deleteFirmwareFile();
 
                     Boolean success = action.equals(ACTION_FOTA_SUCCESS) ? true : false;
                     String reason = action.equals(ACTION_FOTA_SUCCESS) ? "N/A" : "Default fail message";
