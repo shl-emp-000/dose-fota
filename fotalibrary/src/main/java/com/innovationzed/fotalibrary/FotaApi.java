@@ -224,13 +224,13 @@ public class FotaApi {
      * - ACTION_FOTA_NOT_POSSIBLE
      */
     private void checkFirmwareUpdatePossible(){
-        mUpdatePossible = true;
+        mUpdatePossible = false;
 
         // Check permissions
-        mUpdatePossible &= mContext.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
+        boolean permissions = mContext.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
                 mContext.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
                 mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-        if (!mUpdatePossible) {
+        if (!permissions) {
             broadcast(ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED);
             return;
         }
@@ -241,7 +241,6 @@ public class FotaApi {
             public void onResponse(Call<List<Firmware>> call, Response<List<Firmware>> response) {
 
                 if (!response.isSuccessful()) {
-                    mUpdatePossible = false;
                     broadcast(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
                     return;
                 }
@@ -249,15 +248,15 @@ public class FotaApi {
                 // Compare firmware versions
                 List<Firmware> versions = response.body();
                 latestFirmwareVersion = versions.get(0).getFirmwareVersion();
-                mUpdatePossible &= (compareVersion((String)mDeviceInformation.get("firmwareVersion"), latestFirmwareVersion) < 0);
-                if (!mUpdatePossible){
+                boolean updateExists = (compareVersion((String)mDeviceInformation.get("firmwareVersion"), latestFirmwareVersion) < 0);
+                if (!updateExists){
                     broadcast(ACTION_FOTA_NO_UPDATE_EXISTS);
                     return;
                 }
 
                 // Check wifi
-                mUpdatePossible &= Utils.checkWifi(mContext);
-                if (!mUpdatePossible) {
+                boolean networkConnection = Utils.checkWifi(mContext) && Utils.checkNetwork(mContext);
+                if (!networkConnection) {
                     broadcast(ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION);
                     return;
                 }
@@ -265,18 +264,22 @@ public class FotaApi {
                 // Check phone battery
                 BatteryManager bm = (BatteryManager)mContext.getSystemService(mContext.BATTERY_SERVICE);
                 int percentage = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-                mUpdatePossible &= percentage >= 50;
-                if (!mUpdatePossible) {
+                boolean enoughBatteryPhone = percentage >= 50;
+                if (!enoughBatteryPhone) {
                     broadcast(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE);
                     return;
                 }
 
                 // Check device battery
-                mUpdatePossible &= (int)mDeviceInformation.get("batteryLevel") >= 50;
-                if (!mUpdatePossible) {
+                boolean enoughBatteryDevice = (int)mDeviceInformation.get("batteryLevel") >= 50;
+                if (!enoughBatteryDevice) {
                     broadcast(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE);
                     return;
                 }
+
+                // If FOTA is possible, broadcast ACTION_FOTA_POSSIBLE
+                mUpdatePossible = true;
+                broadcast(ACTION_FOTA_POSSIBLE);
             }
 
             @Override
