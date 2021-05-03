@@ -6,10 +6,32 @@
     android:clickable="true"
     android:orientation="vertical">
 
+    <TextView
+        android:id="@+id/textViewMacAddress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/black"
+        android:text="Enter MAC address (NOT during ongoing FOTA):"></TextView>
+
+    <EditText
+        android:id="@+id/editTextMacAddress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/black"
+        android:layout_below="@id/textViewMacAddress"></EditText>
+
+    <Button
+        android:id="@+id/buttonMacAddress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/editTextMacAddress"
+        android:text="Change device" />
+
     <Button
         android:id="@+id/buttonPossible"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_below="@id/buttonMacAddress"
         android:text="Check if firmware update is possible" />
 
     <Button

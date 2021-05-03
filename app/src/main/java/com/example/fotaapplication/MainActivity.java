@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -81,6 +82,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mUserWantsToUpdate = false;
 
         // Attach onClickListeners
+        ((Button)findViewById(R.id.buttonMacAddress)).setOnClickListener(this);
         ((Button)findViewById(R.id.buttonPossible)).setOnClickListener(this);
         ((Button)findViewById(R.id.buttonUserConfirmation)).setOnClickListener(this);
         ((Button)findViewById(R.id.buttonFota)).setOnClickListener(this);
@@ -97,6 +99,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
+            case R.id.buttonMacAddress:
+                // This is just for testing, the MAC address should be sent to FotaApi when it's created
+                EditText mac = (EditText) findViewById(R.id.editTextMacAddress);
+                String macString = mac.getText().toString();
+                if (macString != null || macString != ""){
+                    mFotaApi.macAddress = macString;
+                }
             case R.id.buttonPossible:
                 mFotaApi.isFirmwareUpdatePossible();
                 setTextInformation("Checking if firmware update is possible...");
