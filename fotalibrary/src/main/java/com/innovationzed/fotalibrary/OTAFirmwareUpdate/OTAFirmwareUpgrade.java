@@ -74,6 +74,7 @@ import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeSer
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_CONNECTED;
 import static com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase.UUID_IMMEDIATE_ALERT_SERVICE;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_COULD_NOT_BE_STARTED;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FAIL;
 import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
 
@@ -225,7 +226,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
             }
         } else {
             // Broadcast message saying that FOTA could not be started because the device isn't bonded and connected
-            return;
+            BluetoothLeService.sendLocalBroadcastIntent(this, new Intent(ACTION_FOTA_COULD_NOT_BE_STARTED));
         }
 
     }
