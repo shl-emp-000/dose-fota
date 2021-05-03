@@ -202,7 +202,7 @@ public class FotaApi {
                 // Compare firmware versions
                 List<Firmware> versions = response.body();
                 latestFirmwareVersion = versions.get(0).getFirmwareVersion();
-                mUpdatePossible &= (compareVersion((String)mDeviceInformation.get("firmwareVersion"), latestFirmwareVersion) >= 0);
+                mUpdatePossible &= (compareVersion((String)mDeviceInformation.get("firmwareVersion"), latestFirmwareVersion) < 0);
                 if (!mUpdatePossible){
                     broadcast(ACTION_FOTA_NO_UPDATE_EXISTS);
                     return;
