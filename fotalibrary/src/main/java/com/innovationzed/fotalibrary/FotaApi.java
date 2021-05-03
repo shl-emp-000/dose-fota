@@ -31,10 +31,34 @@ public class FotaApi {
     public static String latestFirmwareVersion;
     public static String DOWNLOADED_FIRMWARE_DIR;
     public static final String ROOT_DIR = "/storage/emulated/0/Download";
-    public static final String ACTION_FOTA_POSSIBLE = BluetoothLeService.ACTION_OTA_IS_POSSIBLE;
-    public static final String ACTION_FOTA_NOT_POSSIBLE = BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE;
-    public static final String ACTION_FOTA_SUCCESS = BluetoothLeService.ACTION_OTA_SUCCESS;
-    public static final String ACTION_FOTA_FAIL = BluetoothLeService.ACTION_OTA_FAIL;
+
+    /**
+     * Actions that can be broadcasted by fotalibrary
+     */
+    public final static String ACTION_FOTA_SUCCESS =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_SUCCESS";
+    public final static String ACTION_FOTA_FAIL =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_FAIL";
+    public final static String ACTION_FOTA_COULD_NOT_BE_STARTED =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_COULD_NOT_BE_STARTED";
+    public final static String ACTION_FOTA_FILE_DOWNLOADED =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_FILE_DOWNLOADED";
+    public final static String ACTION_FOTA_FILE_DOWNLOAD_FAILED =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_FILE_DOWNLOAD_FAILED";
+    public final static String ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED";
+    public final static String ACTION_FOTA_NO_UPDATE_EXISTS =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NO_UPDATE_EXISTS";
+    public final static String ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION";
+    public final static String ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE";
+    public final static String ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE";
+    public final static String ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED";
+    public final static String ACTION_FOTA_POSSIBLE =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_POSSIBLE";
 
     private Context mContext;
     private Intent mOTAServiceIntent;
@@ -51,12 +75,11 @@ public class FotaApi {
         public void onReceive(Context context, Intent intent) {
             synchronized (this) {
                 final String action = intent.getAction();
-                if (mUpdatePossible && mUserConfirmation && (action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) || action.equals(BluetoothLeService.ACTION_OTA_FAIL))){
+                if (mUpdatePossible && mUserConfirmation && (action.equals(ACTION_FOTA_SUCCESS) || action.equals(ACTION_FOTA_FAIL))){
                     mUpdatePossible = false;
-                    Utils.deleteFirmwareFile();
 
-                    Boolean success = action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) ? true : false;
-                    String reason = action.equals(BluetoothLeService.ACTION_OTA_SUCCESS) ? "N/A" : "Default fail message";
+                    Boolean success = action.equals(ACTION_FOTA_SUCCESS) ? true : false;
+                    String reason = action.equals(ACTION_FOTA_SUCCESS) ? "N/A" : "Default fail message";
 
                     Bundle bundle = intent.getExtras();
                     if (bundle.containsKey(OTA_REASON)){
@@ -68,6 +91,9 @@ public class FotaApi {
                     }
                     mContext.stopService(mOTAServiceIntent);
                     mContext.stopService(mBluetoothLeServiceIntent);
+                } else if (action.equals(ACTION_FOTA_FILE_DOWNLOADED)){
+                    mContext.startService(mBluetoothLeServiceIntent);
+                    mContext.startService(mOTAServiceIntent);
                 }
             }
         }
@@ -104,44 +130,87 @@ public class FotaApi {
      * - firmware update exists
      *
      * When the check is done one of the following actions will be broadcasted:
-     * - BluetoothLeService.ACTION_OTA_IS_POSSIBLE
-     * - BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE
+     * - ACTION_FOTA_POSSIBLE
+     * - ACTION_FOTA_NOT_POSSIBLE
      */
     public void isFirmwareUpdatePossible(){
         if (!mUpdatePossible){
             checkFirmwareUpdatePossible();
         } else {
-            broadcast(BluetoothLeService.ACTION_OTA_IS_POSSIBLE);
+            broadcast(ACTION_FOTA_POSSIBLE);
         }
     }
 
     /**
-     * Update the firmware over-the-air via BLE. The device needs to be in boot mode before calling this method.
+     * Update the firmware over-the-air via BLE
      *
      * @param userConfirmation: if the user has confirmed that they want to do a firmware update of their device
      *
      * If the firmware update finishes successfully the following action will be broadcasted:
-     * - BluetoothLeService.ACTION_OTA_SUCCESS
+     * - ACTION_FOTA_SUCCESS
      * If the firmware update fails the following action will be broadcasted:
-     * - BluetoothLeService.ACTION_OTA_FAIL
+     * - ACTION_FOTA_FAIL
      */
     public void doFirmwareUpdate(boolean userConfirmation){
         mUserConfirmation = userConfirmation;
         if (mUserConfirmation && mUpdatePossible){
             mHasPostedToBackend = false;
-            mContext.startService(mBluetoothLeServiceIntent);
-            mContext.startService(mOTAServiceIntent);
+            downloadFirmwareFile();
         }
         else {
             Utils.deleteFirmwareFile();
             // This won't be posted to backend, it's just a fail broadcast for the 3rd party app
-            Utils.broadcastOTAFinished(mContext, ACTION_FOTA_FAIL, "Firmware update was not possible or user has not confirmed update.");
+            Utils.broadcastOTAFinished(mContext, ACTION_FOTA_COULD_NOT_BE_STARTED, "Firmware update was not possible or user has not confirmed update.");
         }
 
     }
 
 
     /********** PRIVATE HELPER FUNCTIONS **********/
+
+    /**
+     * Download firmware file from backend
+     */
+    private void downloadFirmwareFile(){
+        // Download firmware file
+        Callback<ResponseBody> callback = new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+
+                if (!response.isSuccessful()) {
+                    broadcast(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+                    return;
+                }
+                // Get filename from Content-Disposition
+                String contentDisposition = response.raw().header("Content-Disposition");
+                String strFilename = "filename=";
+                int startIndex = contentDisposition.indexOf(strFilename);
+                String filename = contentDisposition.substring(startIndex + strFilename.length());
+
+                // Create folder ROOT_DIR if it doesn't exist
+                File folder = new File(ROOT_DIR);
+                if (!folder.exists()) {
+                    folder.mkdir();
+                }
+                String firmwarePath =  ROOT_DIR + File.separator + filename;
+                boolean writtenToDisk = Utils.writeResponseBodyToDisk(response.body(), firmwarePath);
+
+                if (writtenToDisk) {
+                    DOWNLOADED_FIRMWARE_DIR = firmwarePath;
+                    broadcast(ACTION_FOTA_FILE_DOWNLOADED);
+                } else {
+                    broadcast(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                broadcast(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+            }
+        };
+
+        mBackend.downloadLatestFirmwareFile(callback);
+    }
 
     /**
      * Checks if a firmware update is possible. The following criteria applies:
@@ -151,105 +220,75 @@ public class FotaApi {
      * - firmware update exists
      *
      * When the check is done one of the following actions will be broadcasted:
-     * - BluetoothLeService.ACTION_OTA_IS_POSSIBLE
-     * - BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE
+     * - ACTION_FOTA_POSSIBLE
+     * - ACTION_FOTA_NOT_POSSIBLE
      */
     private void checkFirmwareUpdatePossible(){
-        mUpdatePossible = true;
+        mUpdatePossible = false;
 
         // Check permissions
-        mUpdatePossible = mUpdatePossible &&
-                mContext.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
+        boolean permissions = mContext.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
                 mContext.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
                 mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-
-        // Check wifi
-        mUpdatePossible = mUpdatePossible && Utils.checkWifi(mContext);
-
-        // Check phone battery
-        BatteryManager bm = (BatteryManager)mContext.getSystemService(mContext.BATTERY_SERVICE);
-        int percentage = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-        mUpdatePossible = mUpdatePossible && percentage >= 50;
-
-        // Check device battery
-        mUpdatePossible = mUpdatePossible && (int)mDeviceInformation.get("batteryLevel") >= 50;
-
-        if (!mUpdatePossible) {
-            broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
-        } else {
-            // Get latest available firmware version and do the checks on response
-            Callback callback = new Callback<List<Firmware>>() {
-                @Override
-                public void onResponse(Call<List<Firmware>> call, Response<List<Firmware>> response) {
-
-                    if (!response.isSuccessful()) {
-                        mUpdatePossible = false;
-                        broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
-                    } else {
-                        List<Firmware> versions = response.body();
-                        latestFirmwareVersion = versions.get(0).getFirmwareVersion();
-
-                        // Compare firmware versions
-                        if (compareVersion((String)mDeviceInformation.get("firmwareVersion"), latestFirmwareVersion) >= 0){
-                            mUpdatePossible = false;
-                        }
-
-                        // Download firmware file
-                        Callback<ResponseBody> callback = new Callback<ResponseBody>() {
-                            @Override
-                            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-
-                                if (!response.isSuccessful()) {
-                                    mUpdatePossible = false;
-                                    broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
-                                    return;
-                                }
-                                // Get filename from Content-Disposition
-                                String contentDisposition = response.raw().header("Content-Disposition");
-                                String strFilename = "filename=";
-                                int startIndex = contentDisposition.indexOf(strFilename);
-                                String filename = contentDisposition.substring(startIndex + strFilename.length());
-
-                                // Create folder ROOT_DIR if it doesn't exist
-                                File folder = new File(ROOT_DIR);
-                                if (!folder.exists()) {
-                                    folder.mkdir();
-                                }
-                                String firmwarePath =  ROOT_DIR + File.separator + filename;
-                                boolean writtenToDisk = Utils.writeResponseBodyToDisk(response.body(), firmwarePath);
-
-                                if (writtenToDisk) {
-                                    DOWNLOADED_FIRMWARE_DIR = firmwarePath;
-                                    broadcast(BluetoothLeService.ACTION_OTA_IS_POSSIBLE);
-                                } else {
-                                    broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
-                                }
-                            }
-
-                            @Override
-                            public void onFailure(Call<ResponseBody> call, Throwable t) {
-                                broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
-                            }
-                        };
-
-                        if (mUpdatePossible) {
-                            mBackend.downloadLatestFirmwareFile(callback);
-                        } else {
-                            broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
-                        }
-                    }
-
-                }
-
-                @Override
-                public void onFailure(Call<List<Firmware>> call, Throwable t) {
-                    broadcast(BluetoothLeService.ACTION_OTA_IS_NOT_POSSIBLE);
-                }
-            };
-
-            mBackend.getLatestFirmwareVersion(callback);
+        if (!permissions) {
+            broadcast(ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED);
+            return;
         }
 
+        // Get latest available firmware version and do the checks on response
+        Callback callback = new Callback<List<Firmware>>() {
+            @Override
+            public void onResponse(Call<List<Firmware>> call, Response<List<Firmware>> response) {
+
+                if (!response.isSuccessful()) {
+                    broadcast(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
+                    return;
+                }
+
+                // Compare firmware versions
+                List<Firmware> versions = response.body();
+                latestFirmwareVersion = versions.get(0).getFirmwareVersion();
+                boolean updateExists = (compareVersion((String)mDeviceInformation.get("firmwareVersion"), latestFirmwareVersion) < 0);
+                if (!updateExists){
+                    broadcast(ACTION_FOTA_NO_UPDATE_EXISTS);
+                    return;
+                }
+
+                // Check wifi
+                boolean networkConnection = Utils.checkWifi(mContext) && Utils.checkNetwork(mContext);
+                if (!networkConnection) {
+                    broadcast(ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION);
+                    return;
+                }
+
+                // Check phone battery
+                BatteryManager bm = (BatteryManager)mContext.getSystemService(mContext.BATTERY_SERVICE);
+                int percentage = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+                boolean enoughBatteryPhone = percentage >= 50;
+                if (!enoughBatteryPhone) {
+                    broadcast(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE);
+                    return;
+                }
+
+                // Check device battery
+                boolean enoughBatteryDevice = (int)mDeviceInformation.get("batteryLevel") >= 50;
+                if (!enoughBatteryDevice) {
+                    broadcast(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE);
+                    return;
+                }
+
+                // If FOTA is possible, broadcast ACTION_FOTA_POSSIBLE
+                mUpdatePossible = true;
+                broadcast(ACTION_FOTA_POSSIBLE);
+            }
+
+            @Override
+            public void onFailure(Call<List<Firmware>> call, Throwable t) {
+                broadcast(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
+            }
+        };
+
+        mBackend.getLatestFirmwareVersion(callback);
     }
 
     /**
