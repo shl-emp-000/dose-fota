@@ -41,6 +41,10 @@ public class FotaApi {
             "com.innovationzed.fotalibrary.ACTION_FOTA_FAIL";
     public final static String ACTION_FOTA_COULD_NOT_BE_STARTED =
             "com.innovationzed.fotalibrary.ACTION_FOTA_COULD_NOT_BE_STARTED";
+    public final static String ACTION_FOTA_FILE_DOWNLOADED =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_FILE_DOWNLOADED";
+    public final static String ACTION_FOTA_FILE_DOWNLOAD_FAILED =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_FILE_DOWNLOAD_FAILED";
     public final static String ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED =
             "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED";
     public final static String ACTION_FOTA_NO_UPDATE_EXISTS =
@@ -51,8 +55,6 @@ public class FotaApi {
             "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE";
     public final static String ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE =
             "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE";
-    public final static String ACTION_FOTA_NOT_POSSIBLE_FILE_DOWNLOAD_FAILED =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_FILE_DOWNLOAD_FAILED";
     public final static String ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED =
             "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED";
     public final static String ACTION_FOTA_POSSIBLE =
@@ -89,6 +91,9 @@ public class FotaApi {
                     }
                     mContext.stopService(mOTAServiceIntent);
                     mContext.stopService(mBluetoothLeServiceIntent);
+                } else if (action.equals(ACTION_FOTA_FILE_DOWNLOADED)){
+                    mContext.startService(mBluetoothLeServiceIntent);
+                    mContext.startService(mOTAServiceIntent);
                 }
             }
         }
@@ -137,7 +142,7 @@ public class FotaApi {
     }
 
     /**
-     * Update the firmware over-the-air via BLE. The device needs to be in boot mode before calling this method.
+     * Update the firmware over-the-air via BLE
      *
      * @param userConfirmation: if the user has confirmed that they want to do a firmware update of their device
      *
@@ -150,8 +155,7 @@ public class FotaApi {
         mUserConfirmation = userConfirmation;
         if (mUserConfirmation && mUpdatePossible){
             mHasPostedToBackend = false;
-            mContext.startService(mBluetoothLeServiceIntent);
-            mContext.startService(mOTAServiceIntent);
+            downloadFirmwareFile();
         }
         else {
             Utils.deleteFirmwareFile();
@@ -163,6 +167,50 @@ public class FotaApi {
 
 
     /********** PRIVATE HELPER FUNCTIONS **********/
+
+    /**
+     * Download firmware file from backend
+     */
+    private void downloadFirmwareFile(){
+        // Download firmware file
+        Callback<ResponseBody> callback = new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+
+                if (!response.isSuccessful()) {
+                    broadcast(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+                    return;
+                }
+                // Get filename from Content-Disposition
+                String contentDisposition = response.raw().header("Content-Disposition");
+                String strFilename = "filename=";
+                int startIndex = contentDisposition.indexOf(strFilename);
+                String filename = contentDisposition.substring(startIndex + strFilename.length());
+
+                // Create folder ROOT_DIR if it doesn't exist
+                File folder = new File(ROOT_DIR);
+                if (!folder.exists()) {
+                    folder.mkdir();
+                }
+                String firmwarePath =  ROOT_DIR + File.separator + filename;
+                boolean writtenToDisk = Utils.writeResponseBodyToDisk(response.body(), firmwarePath);
+
+                if (writtenToDisk) {
+                    DOWNLOADED_FIRMWARE_DIR = firmwarePath;
+                    broadcast(ACTION_FOTA_FILE_DOWNLOADED);
+                } else {
+                    broadcast(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                broadcast(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+            }
+        };
+
+        mBackend.downloadLatestFirmwareFile(callback);
+    }
 
     /**
      * Checks if a firmware update is possible. The following criteria applies:
@@ -229,46 +277,6 @@ public class FotaApi {
                     broadcast(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE);
                     return;
                 }
-
-                // Download firmware file
-                Callback<ResponseBody> callback = new Callback<ResponseBody>() {
-                    @Override
-                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-
-                        if (!response.isSuccessful()) {
-                            mUpdatePossible = false;
-                            broadcast(ACTION_FOTA_NOT_POSSIBLE_FILE_DOWNLOAD_FAILED);
-                            return;
-                        }
-                        // Get filename from Content-Disposition
-                        String contentDisposition = response.raw().header("Content-Disposition");
-                        String strFilename = "filename=";
-                        int startIndex = contentDisposition.indexOf(strFilename);
-                        String filename = contentDisposition.substring(startIndex + strFilename.length());
-
-                        // Create folder ROOT_DIR if it doesn't exist
-                        File folder = new File(ROOT_DIR);
-                        if (!folder.exists()) {
-                            folder.mkdir();
-                        }
-                        String firmwarePath =  ROOT_DIR + File.separator + filename;
-                        boolean writtenToDisk = Utils.writeResponseBodyToDisk(response.body(), firmwarePath);
-
-                        if (writtenToDisk) {
-                            DOWNLOADED_FIRMWARE_DIR = firmwarePath;
-                            broadcast(ACTION_FOTA_POSSIBLE);
-                        } else {
-                            broadcast(ACTION_FOTA_NOT_POSSIBLE_FILE_DOWNLOAD_FAILED);
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<ResponseBody> call, Throwable t) {
-                        broadcast(ACTION_FOTA_NOT_POSSIBLE_FILE_DOWNLOAD_FAILED);
-                    }
-                };
-
-                mBackend.downloadLatestFirmwareFile(callback);
             }
 
             @Override

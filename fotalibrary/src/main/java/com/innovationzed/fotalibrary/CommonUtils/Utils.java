@@ -67,8 +67,8 @@ import java.util.regex.Pattern;
 import okhttp3.ResponseBody;
 
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FAIL;
-//import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_FILE_DOWNLOAD_FAILED;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FILE_DOWNLOADED;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FILE_DOWNLOAD_FAILED;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED;
@@ -323,8 +323,8 @@ public class Utils {
         filter.addAction(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE);
         filter.addAction(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE);
         filter.addAction(ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED);
-        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_FILE_DOWNLOAD_FAILED);
-//        filter.addAction(ACTION_FOTA_NOT_POSSIBLE);
+        filter.addAction(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+        filter.addAction(ACTION_FOTA_FILE_DOWNLOADED);
         return filter;
     }
 

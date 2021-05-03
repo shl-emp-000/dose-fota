@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     setTextInformation("The phone battery is too low.");
                 } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE)){
                     setTextInformation("The device battery is too low.");
-                } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE_FILE_DOWNLOAD_FAILED)){
+                } else if (action.equals(FotaApi.ACTION_FOTA_FILE_DOWNLOAD_FAILED)){
                     setTextInformation("Downloading the firmware file failed.");
                 } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED)){
                     setTextInformation("The version check failed.");
