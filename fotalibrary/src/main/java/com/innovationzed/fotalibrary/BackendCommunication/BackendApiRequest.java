@@ -49,7 +49,8 @@ public class BackendApiRequest {
     public void postFotaResult(boolean success, String reason) {
         String date = mSdf.format(new Date(System.currentTimeMillis()));
         Dictionary deviceInfo = Utils.getDeviceInformation();
-        HistoryRequest history = new HistoryRequest((String) deviceInfo.get("deviceSN"), date, success, FotaApi.latestFirmwareVersion, (String) deviceInfo.get("firmwareVersion"), reason);
+        HistoryRequest history = new HistoryRequest((String) deviceInfo.get("deviceSN"), date, success, FotaApi.latestFirmwareVersion, (String) deviceInfo.get("firmwareVersion"), reason,
+                (String) deviceInfo.get("manufacturerName"), (String) deviceInfo.get("modelNumber"), (String) deviceInfo.get("hardwareRevision"), (String) deviceInfo.get("softwareRevision"));
         mRetryCounter = 0;
 
         // Call API

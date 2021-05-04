@@ -102,6 +102,10 @@ public class Utils {
         deviceInfo.put("deviceSN", "1122");
         deviceInfo.put("firmwareVersion", "0.3.0");
         deviceInfo.put("batteryLevel", 75);
+        deviceInfo.put("manufacturerName", "Manufacturer name");
+        deviceInfo.put("modelNumber", "Model number");
+        deviceInfo.put("hardwareRevision", "Hardware revision");
+        deviceInfo.put("softwareRevision", "Software revision");
         return deviceInfo;
     }
 
