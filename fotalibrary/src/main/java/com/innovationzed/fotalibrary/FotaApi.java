@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.BatteryManager;
 import android.os.Bundle;
+import android.os.Handler;
 
 import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
 import com.innovationzed.fotalibrary.BLEConnectionServices.DeviceInformationService;
@@ -81,17 +82,18 @@ public class FotaApi {
     public final static String ACTION_DEVICE_INFO_READ =
             "com.innovationzed.fotalibrary.ACTION_DEVICE_INFO_READ";
 
-    private Context mContext;
-    private Intent mOTAServiceIntent;
-    private Intent mBluetoothLeServiceIntent;
+    private static Context mContext;
+    private static Intent mOTAServiceIntent;
+    private static Intent mBluetoothLeServiceIntent;
     private static Dictionary mDeviceInformation;
-    private BackendApiRequest mBackend;
-    private DeviceInformationService mDeviceInformationService;
+    private static BackendApiRequest mBackend;
+    private static DeviceInformationService mDeviceInformationService;
 
-    private boolean mUpdatePossible;
-    private boolean mHasPostedToBackend;
-    private boolean mUserConfirmation;
+    private static boolean mUpdatePossible = false;
+    private static boolean mShouldPostToBackend = false;
+    private static boolean mUserConfirmation = false;
 
+    private static boolean isInitialized = false;
     private static boolean mHasStartedBonding = false;
     private static boolean mIsFotaInProgress = false;
     private static boolean mHasBonded = false;
@@ -162,12 +164,11 @@ public class FotaApi {
                     if (bundle.containsKey(OTA_REASON)){
                         reason = bundle.getString(OTA_REASON);
                     }
-                    if (!mHasPostedToBackend) {
+                    if (mShouldPostToBackend) {
                         mBackend.postFotaResult(success, reason, mDeviceInformation);
-                        mHasPostedToBackend = true;
+                        mShouldPostToBackend = false;
                     }
                     mContext.stopService(mOTAServiceIntent);
-                    mContext.stopService(mBluetoothLeServiceIntent);
                 } else if (action.equals(ACTION_FOTA_FILE_DOWNLOADED) && !mIsFotaInProgress){
                     mIsFotaInProgress = true;
                     mContext.startService(mOTAServiceIntent);
@@ -187,21 +188,31 @@ public class FotaApi {
      * @param macAddress: MAC address of the device
      */
     public FotaApi (Context context, String macAddress){
+        if (!isInitialized) {
+            this.macAddress = macAddress;
+            mContext = context;
+            mOTAServiceIntent = new Intent(mContext, OTAFirmwareUpgrade.class);
+            mBluetoothLeServiceIntent = new Intent(mContext, BluetoothLeService.class);
+            mBackend = new BackendApiRequest(context);
+
+            // Register receiver
+            BluetoothLeService.registerBroadcastReceiver(mContext, mOTAStatusReceiver, Utils.makeOTAIntentFilter());
+
+            // Start BLE service
+            mContext.startService(mBluetoothLeServiceIntent);
+
+            // Initialize variables
+            resetAllVariables();
+            isInitialized = true;
+        }
+    }
+
+    /**
+     * Change device. This needs to be done before isFirmwareUpdatePossible and doFirmwareUpdate is called
+     */
+    public void changeDevice(String macAddress){
         this.macAddress = macAddress;
-
-        mHasPostedToBackend = true;
-        mContext = context;
-        mOTAServiceIntent = new Intent(mContext, OTAFirmwareUpgrade.class);
-        mBluetoothLeServiceIntent = new Intent(mContext, BluetoothLeService.class);
-        mBackend = new BackendApiRequest(context);
-
-        // Register receiver
-        BluetoothLeService.registerBroadcastReceiver(mContext, mOTAStatusReceiver, Utils.makeOTAIntentFilter());
-
-        // Start BLE service
-        mContext.startService(mBluetoothLeServiceIntent);
-
-        mUpdatePossible = false;
+        resetAllVariables();
     }
 
     /**
@@ -236,8 +247,8 @@ public class FotaApi {
     public void doFirmwareUpdate(boolean userConfirmation){
         mUserConfirmation = userConfirmation;
         if (mUserConfirmation && mUpdatePossible){
-            mHasPostedToBackend = false;
-            mIsFotaInProgress = false;
+            mShouldPostToBackend = true;
+            resetBLEConnectionVariables();
             // Check if device is connected and paired
             BluetoothDevice device = BluetoothLeService.getRemoteDevice(FotaApi.macAddress);
             int connectionState = BluetoothLeService.getConnectionState(device);
@@ -317,7 +328,7 @@ public class FotaApi {
      * - ACTION_FOTA_NOT_POSSIBLE
      */
     private void checkFirmwareUpdatePossible(){
-        mUpdatePossible = false;
+        resetAllVariables();
 
         // Check permissions
         boolean permissions = mContext.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
@@ -389,11 +400,8 @@ public class FotaApi {
 
                 // If FOTA is possible, broadcast ACTION_FOTA_POSSIBLE
                 mUpdatePossible = true;
-                mHasPostedToBackend = false;
-                mIsFotaInProgress = false;
                 mNextState = STATE_JUMP_TO_BOOT;
-                mHasStartedBonding = false;
-                mHasBonded = false;
+                resetBLEConnectionVariables();
                 broadcast(ACTION_FOTA_POSSIBLE);
             }
 
@@ -413,6 +421,28 @@ public class FotaApi {
     private void broadcast(String action){
         Intent intent = new Intent(action);
         BluetoothLeService.sendLocalBroadcastIntent(mContext, intent);
+    }
+
+    /**
+     * Resets all variables to starting values
+     */
+    private void resetAllVariables(){
+        mUpdatePossible = false;
+        mShouldPostToBackend = false;
+        mUserConfirmation = false;
+        mIsFotaInProgress = false;
+        resetBLEConnectionVariables();
+
+        mNextState = STATE_READ_DEVICE_INFO;
+    }
+
+    /**
+     * Resets BLE connection variables to starting values
+     */
+    private void resetBLEConnectionVariables(){
+        mHasStartedBonding = false;
+        mHasBonded = false;
+        mServiceDiscoveryStarted = false;
     }
 
     /**
@@ -461,17 +491,20 @@ public class FotaApi {
             BluetoothGattCharacteristic gattCharacteristic = service.getCharacteristic(UUIDDatabase.UUID_ALERT_LEVEL);
             if (gattCharacteristic != null) {
                 BluetoothLeService.writeCharacteristicNoResponse(gattCharacteristic, convertedBytes);
-                try{
-                    Thread.sleep(2000);
-                    mHasStartedBonding = false;
-                    mServiceDiscoveryStarted = false;
-                    mHasBonded = false;
-                    mNextState = STATE_START_FOTA;
-                    // unpair and pair again after jump to be able to discover OTA service
-                    BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
-                } catch (Exception e) {
-                    OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "FOTA failed during jump to boot. " + e.getMessage());
-                }
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        try{
+                            resetBLEConnectionVariables();
+                            mNextState = STATE_START_FOTA;
+                            // unpair and pair again after jump to be able to discover OTA service
+                            BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
+                        } catch (Exception e) {
+                            OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "FOTA failed during jump to boot. " + e.getMessage());
+                        }
+                    }
+                }, 1000);
+
             } else {
                 OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "FOTA failed during jump to boot. Alert level characteristic not found.");
             }
