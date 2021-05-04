@@ -81,7 +81,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         // Anders MAC 00:A0:50:BA:CC:CE
         // Emmy MAC 00:A0:50:B4:42:33
-        mFotaApi = new FotaApi(this, "00:A0:50:E2:65:48"); // MAC address is hardcoded at this point
+        // DOSE v5 MAC 00:A0:50:E2:65:48
+        mFotaApi = new FotaApi(this, "00:A0:50:B4:42:33"); // MAC address is hardcoded at this point
         mUserWantsToUpdate = false;
 
         // Attach onClickListeners
@@ -90,6 +91,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ((Button)findViewById(R.id.buttonUserConfirmation)).setOnClickListener(this);
         ((Button)findViewById(R.id.buttonFota)).setOnClickListener(this);
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
     }
 
     @Override
@@ -104,7 +115,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (view.getId()) {
             case R.id.buttonMacAddress:
                 // This is just for testing, the MAC address should be sent to FotaApi when it's created
-                // NOTE: Not working properly yet!
                 EditText mac = (EditText) findViewById(R.id.editTextMacAddress);
                 String macString = mac.getText().toString();
                 if (macString != null || macString != ""){
