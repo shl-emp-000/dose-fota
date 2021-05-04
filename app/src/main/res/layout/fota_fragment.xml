@@ -10,8 +10,8 @@
         android:id="@+id/textViewMacAddress"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="@color/black"
-        android:text="Enter MAC address (NOT during ongoing FOTA):"></TextView>
+        android:text="Enter MAC address (NOT working yet):"
+        android:textColor="@color/black"></TextView>
 
     <EditText
         android:id="@+id/editTextMacAddress"

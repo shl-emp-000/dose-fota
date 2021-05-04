@@ -46,11 +46,11 @@ public class BackendApiRequest {
         call.enqueue(callback);
     }
 
-    public void postFotaResult(boolean success, String reason) {
+    public void postFotaResult(boolean success, String reason, Dictionary deviceInfo) {
         String date = mSdf.format(new Date(System.currentTimeMillis()));
-        Dictionary deviceInfo = Utils.getDeviceInformation();
-        HistoryRequest history = new HistoryRequest((String) deviceInfo.get("deviceSN"), date, success, FotaApi.latestFirmwareVersion, (String) deviceInfo.get("firmwareVersion"), reason,
-                (String) deviceInfo.get("manufacturerName"), (String) deviceInfo.get("modelNumber"), (String) deviceInfo.get("hardwareRevision"), (String) deviceInfo.get("softwareRevision"));
+        //Dictionary deviceInfo = Utils.getDeviceInformation();
+        HistoryRequest history = new HistoryRequest((String) FotaApi.macAddress, date, success, FotaApi.latestFirmwareVersion, (String) deviceInfo.get("FirmwareRevision"), reason,
+                (String) deviceInfo.get("ManufacturerName"), (String) deviceInfo.get("ModelNumber"), (String) deviceInfo.get("HardwareRevision"), (String) deviceInfo.get("SoftwareRevision"));
         mRetryCounter = 0;
 
         // Call API

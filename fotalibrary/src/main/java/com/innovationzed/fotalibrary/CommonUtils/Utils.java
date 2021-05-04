@@ -58,20 +58,23 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Dictionary;
-import java.util.Hashtable;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import okhttp3.ResponseBody;
 
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_DEVICE_INFO_READ;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_BLE_CONNECTION_FAILED;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_COULD_NOT_BE_STARTED;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FAIL;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FILE_DOWNLOADED;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FILE_DOWNLOAD_FAILED;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NO_UPDATE_EXISTS;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_POSSIBLE;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_SUCCESS;
@@ -92,22 +95,6 @@ public class Utils {
     public static final Locale DATA_LOCALE = Locale.ROOT;
     public static final String DATA_LOGGER_FILENAME_PATTERN = "dd-MMM-yyyy";
 
-    /**
-     * Gets hardcoded device data
-     *
-     * @return Dictionary containing deviceSN (String), firmwareVersion (String), batteryLevel (int)
-     */
-    public static Dictionary getDeviceInformation(){
-        Dictionary deviceInfo = new Hashtable();
-        deviceInfo.put("deviceSN", "1122");
-        deviceInfo.put("firmwareVersion", "0.3.0");
-        deviceInfo.put("batteryLevel", 75);
-        deviceInfo.put("manufacturerName", "Manufacturer name");
-        deviceInfo.put("modelNumber", "Model number");
-        deviceInfo.put("hardwareRevision", "Hardware revision");
-        deviceInfo.put("softwareRevision", "Software revision");
-        return deviceInfo;
-    }
 
     /**
      * Delete the firmware file and folder
@@ -319,14 +306,19 @@ public class Utils {
     }
 
     public static IntentFilter makeOTAIntentFilter(){
-        final IntentFilter filter = new IntentFilter();
+        final IntentFilter filter = makeGattUpdateIntentFilter();
         filter.addAction(ACTION_FOTA_SUCCESS);
         filter.addAction(ACTION_FOTA_FAIL);
+        filter.addAction(ACTION_FOTA_COULD_NOT_BE_STARTED);
+        filter.addAction(ACTION_FOTA_BLE_CONNECTION_FAILED);
         filter.addAction(ACTION_FOTA_POSSIBLE);
+        filter.addAction(ACTION_DEVICE_INFO_READ);
         filter.addAction(ACTION_FOTA_NO_UPDATE_EXISTS);
         filter.addAction(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE);
         filter.addAction(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE);
         filter.addAction(ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
         filter.addAction(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
         filter.addAction(ACTION_FOTA_FILE_DOWNLOADED);
         return filter;

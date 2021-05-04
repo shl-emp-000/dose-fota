@@ -42,6 +42,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     setTextInformation("Firmware update could not be started: isFirmwareUpdatePossible() has not returned ACTION_FOTA_POSSIBLE, user did not approve update or device isn't paired and connected.");
                 } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED)){
                     setTextInformation("Required permissions are not granted.");
+                } else if (action.equals(FotaApi.ACTION_FOTA_BLE_CONNECTION_FAILED)){
+                    setTextInformation("Bluetooth error: was not able to connect or find the needed services.");
                 } else if (action.equals(FotaApi.ACTION_FOTA_NO_UPDATE_EXISTS)){
                     setTextInformation("The device has the latest firmware installed already.");
                 } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION)){
@@ -78,7 +80,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         BluetoothLeService.registerBroadcastReceiver(this, mOTAStatusReceiver, Utils.makeOTAIntentFilter());
 
         // Anders MAC 00:A0:50:BA:CC:CE
-        mFotaApi = new FotaApi(this, "00:A0:50:B4:42:33"); // MAC address is hardcoded at this point
+        // Emmy MAC 00:A0:50:B4:42:33
+        mFotaApi = new FotaApi(this, "00:A0:50:E2:65:48"); // MAC address is hardcoded at this point
         mUserWantsToUpdate = false;
 
         // Attach onClickListeners
@@ -101,11 +104,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (view.getId()) {
             case R.id.buttonMacAddress:
                 // This is just for testing, the MAC address should be sent to FotaApi when it's created
+                // NOTE: Not working properly yet!
                 EditText mac = (EditText) findViewById(R.id.editTextMacAddress);
                 String macString = mac.getText().toString();
                 if (macString != null || macString != ""){
                     mFotaApi.macAddress = macString;
                 }
+                break;
             case R.id.buttonPossible:
                 mFotaApi.isFirmwareUpdatePossible();
                 setTextInformation("Checking if firmware update is possible...");

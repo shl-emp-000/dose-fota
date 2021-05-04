@@ -1078,6 +1078,7 @@ public class BluetoothLeService extends Service {
     public void onCreate() {
         // Initializing the service
         if (false == initialize()) {
+            return;
         }
     }
 
