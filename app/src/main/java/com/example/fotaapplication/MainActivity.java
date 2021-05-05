@@ -118,7 +118,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 EditText mac = (EditText) findViewById(R.id.editTextMacAddress);
                 String macString = mac.getText().toString();
                 if (macString != null || macString != ""){
-                    mFotaApi.macAddress = macString;
+                    mFotaApi.changeDevice(macString);
                 }
                 break;
             case R.id.buttonPossible:
