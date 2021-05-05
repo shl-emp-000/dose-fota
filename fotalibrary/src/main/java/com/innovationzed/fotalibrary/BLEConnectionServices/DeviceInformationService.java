@@ -119,6 +119,7 @@ public class DeviceInformationService {
                 // all characteristics read
                 if (nbrCharacteristicsRead == NBR_CHARACTERISTICS){
                     BluetoothLeService.sendLocalBroadcastIntent(mContext, new Intent(ACTION_DEVICE_INFO_READ));
+                    nbrCharacteristicsRead = 0;
                 }
             }
         }
