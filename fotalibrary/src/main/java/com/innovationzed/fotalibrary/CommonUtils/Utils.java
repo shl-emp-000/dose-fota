@@ -78,6 +78,7 @@ import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_VER
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NO_UPDATE_EXISTS;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_POSSIBLE;
 import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_SUCCESS;
+import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_TIMEOUT;
 import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
 
 /**
@@ -321,6 +322,7 @@ public class Utils {
         filter.addAction(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
         filter.addAction(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
         filter.addAction(ACTION_FOTA_FILE_DOWNLOADED);
+        filter.addAction(ACTION_FOTA_TIMEOUT);
         return filter;
     }
 

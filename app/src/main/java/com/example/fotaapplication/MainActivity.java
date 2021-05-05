@@ -38,6 +38,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     setTextInformation("Firmware update is finished.");
                 } else if (action.equals(FotaApi.ACTION_FOTA_FAIL)){
                     setTextInformation("Firmware update failed.");
+                } else if (action.equals(FotaApi.ACTION_FOTA_TIMEOUT)){
+                    setTextInformation("Timeout.");
                 } else if (action.equals(FotaApi.ACTION_FOTA_COULD_NOT_BE_STARTED)){
                     setTextInformation("Firmware update could not be started: isFirmwareUpdatePossible() has not returned ACTION_FOTA_POSSIBLE, user did not approve update or device isn't paired and connected.");
                 } else if (action.equals(FotaApi.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED)){
