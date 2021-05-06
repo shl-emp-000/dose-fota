@@ -203,6 +203,7 @@ public class FotaApi {
                         resetAllVariables();
                     } else if (action.equals(ACTION_FOTA_FILE_DOWNLOADED) && !mIsFotaInProgress) {
                         mIsFotaInProgress = true;
+                        mTimeoutHandler.removeCallbacks(mFotaProgressRunnable);
                         mContext.startService(mOTAServiceIntent);
                     } else if (action.equals(ACTION_DEVICE_INFO_READ)) {
                         mDeviceInformationService.stop(mContext);

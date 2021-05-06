@@ -300,12 +300,6 @@ public class Utils {
         return filter;
     }
 
-    public static IntentFilter makeOTADataFilterV0(){
-        final IntentFilter filter = new IntentFilter();
-        filter.addAction(BluetoothLeService.ACTION_OTA_DATA_AVAILABLE);
-        return filter;
-    }
-
     public static IntentFilter makeOTAIntentFilter(){
         final IntentFilter filter = makeGattUpdateIntentFilter();
         filter.addAction(ACTION_FOTA_SUCCESS);

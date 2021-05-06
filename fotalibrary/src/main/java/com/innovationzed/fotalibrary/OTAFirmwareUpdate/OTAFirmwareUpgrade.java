@@ -94,7 +94,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     private OTAFUHandler mOTAFUHandler = DUMMY_HANDLER;//Initializing to DUMMY_HANDLER to avoid NPEs
 
     private OTAResponseReceiver_v1 mOTAResponseReceiverV1;
-    private OTAResponseReceiver_v0 mOTAResponseReceiverV0;
 
     private BroadcastReceiver mGattOTAStatusReceiver = new BroadcastReceiver() {
         @Override
@@ -117,10 +116,8 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     @Override
     public void onCreate() {
         mOTAResponseReceiverV1 = new OTAResponseReceiver_v1();
-        mOTAResponseReceiverV0 = new OTAResponseReceiver_v0();
         BluetoothLeService.registerBroadcastReceiver(this, mGattOTAStatusReceiver, Utils.makeGattUpdateIntentFilter());
         BluetoothLeService.registerBroadcastReceiver(this, mOTAResponseReceiverV1, Utils.makeOTADataFilter());
-        BluetoothLeService.registerBroadcastReceiver(this, mOTAResponseReceiverV0, Utils.makeOTADataFilterV0());
 
         doFota();
     }
@@ -167,10 +164,9 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         }
         BluetoothLeService.unregisterBroadcastReceiver(this, mGattOTAStatusReceiver);
         BluetoothLeService.unregisterBroadcastReceiver(this, mOTAResponseReceiverV1);
-        BluetoothLeService.unregisterBroadcastReceiver(this, mOTAResponseReceiverV0);
 
         final String sharedPrefStatus = Utils.getStringSharedPreference(this, Constants.PREF_BOOTLOADER_STATE);
-        if (!sharedPrefStatus.equalsIgnoreCase("" + BootLoaderCommands_v0.EXIT_BOOTLOADER)) {
+        if (!sharedPrefStatus.equalsIgnoreCase("" + BootLoaderCommands_v1.EXIT_BOOTLOADER)) {
             clearDataAndPreferences();
         }
 
@@ -185,20 +181,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     public IBinder onBind(Intent intent) {
         mBound = true;
         return mBinder;
-    }
-
-    @Nullable
-    private OTAFUHandler createOTAFUHandler(BluetoothGattCharacteristic otaCharacteristic, byte activeApp, long securityKey, String filepath) {
-        boolean isCyacd2File = filepath != null && isCyacd2File(filepath);
-        Utils.setBooleanSharedPreference(this, Constants.PREF_IS_CYACD2_FILE, isCyacd2File);
-
-        OTAFUHandler handler = DUMMY_HANDLER;
-        if (otaCharacteristic != null && filepath != null && filepath != "") {
-            handler = isCyacd2File
-                    ? new OTAFUHandler_v1(this, otaCharacteristic, filepath, this)
-                    : new OTAFUHandler_v0(this, otaCharacteristic, activeApp, securityKey, filepath, this);
-        }
-        return handler;
     }
 
     /**

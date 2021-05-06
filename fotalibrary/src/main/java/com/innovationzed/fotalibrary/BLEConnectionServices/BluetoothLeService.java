@@ -483,7 +483,7 @@ public class BluetoothLeService extends Service {
     private static void onOtaExitBootloaderComplete(int status) {
         Bundle bundle = new Bundle();
         bundle.putByteArray(Constants.EXTRA_BYTE_VALUE, new byte[]{(byte) status});
-        Intent otaDataAvailableIntent = new Intent(BluetoothLeService.ACTION_OTA_DATA_AVAILABLE);
+        Intent otaDataAvailableIntent = new Intent(BluetoothLeService.ACTION_OTA_DATA_AVAILABLE_V1);
         otaDataAvailableIntent.putExtras(bundle);
         // NOTE: sending GLOBAL broadcast as there is receiver in AndroidManifest.xml which listens to ACTION_OTA_DATA_AVAILABLE intents
         sendGlobalBroadcastIntent(mContext, otaDataAvailableIntent);
