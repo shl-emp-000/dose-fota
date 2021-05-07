@@ -11,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 
 import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
 import com.innovationzed.fotalibrary.BLEConnectionServices.DeviceInformationService;
@@ -21,6 +22,10 @@ import com.innovationzed.fotalibrary.CommonUtils.Utils;
 import com.innovationzed.fotalibrary.OTAFirmwareUpdate.OTAFirmwareUpgrade;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Dictionary;
 import java.util.List;
 
@@ -337,7 +342,7 @@ public class FotaApi {
                     folder.mkdir();
                 }
                 String firmwarePath =  ROOT_DIR + File.separator + filename;
-                boolean writtenToDisk = Utils.writeResponseBodyToDisk(response.body(), firmwarePath);
+                boolean writtenToDisk = writeResponseBodyToDisk(response.body(), firmwarePath);
 
                 if (writtenToDisk) {
                     DOWNLOADED_FIRMWARE_DIR = firmwarePath;
@@ -413,7 +418,7 @@ public class FotaApi {
                 // Compare firmware versions
                 List<Firmware> versions = response.body();
                 latestFirmwareVersion = versions.get(0).getFirmwareVersion();
-                boolean updateExists = (compareVersion((String)mDeviceInformation.get("FirmwareRevision"), latestFirmwareVersion) < 0);
+                boolean updateExists = (Utils.compareVersion((String)mDeviceInformation.get("FirmwareRevision"), latestFirmwareVersion) < 0);
                 if (!updateExists){
                     broadcastFirmwareCheck(ACTION_FOTA_NO_UPDATE_EXISTS);
                     return;
@@ -503,41 +508,6 @@ public class FotaApi {
     }
 
     /**
-     * Compares two version number strings
-     *
-     * @param version1
-     * @param version2
-     * @return  1 if version1 > version2
-     *          0 if version1 = version2
-     *          -1 if version1 < version2
-     */
-    private int compareVersion(String version1, String version2) {
-        String[] array1 = version1.split("\\.");
-        String[] array2 = version2.split("\\.");
-
-        int i = 0;
-        while (i < array1.length || i < array2.length){
-            if (i < array1.length && i < array2.length){
-                if (Integer.parseInt(array1[i]) < Integer.parseInt(array2[i])) {
-                    return -1;
-                } else if (Integer.parseInt(array1[i]) > Integer.parseInt(array2[i])) {
-                    return 1;
-                }
-            } else if (i < array1.length) {
-                if (Integer.parseInt(array1[i]) != 0) {
-                    return 1;
-                }
-            } else if (i < array2.length) {
-                if (Integer.parseInt(array2[i]) != 0) {
-                    return -1;
-                }
-            }
-            i++;
-        }
-        return 0;
-    }
-
-    /**
      * Jump to boot mode by sending an immediate alert
      */
     private void jumpToBoot(){
@@ -568,6 +538,55 @@ public class FotaApi {
 
         } else {
             OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "FOTA failed during jump to boot. Immediate alert service not found.");
+        }
+    }
+
+    private boolean writeResponseBodyToDisk(ResponseBody body, String path) {
+        try {
+            File latestFirmwareFile = new File(path);
+
+            InputStream inputStream = null;
+            OutputStream outputStream = null;
+
+            try {
+                byte[] fileReader = new byte[4096];
+
+                long fileSize = body.contentLength();
+                long fileSizeDownloaded = 0;
+
+                inputStream = body.byteStream();
+                outputStream = new FileOutputStream(latestFirmwareFile);
+
+                while (true) {
+                    int read = inputStream.read(fileReader);
+
+                    if (read == -1) {
+                        break;
+                    }
+
+                    outputStream.write(fileReader, 0, read);
+
+                    fileSizeDownloaded += read;
+
+                    Log.d("File Download: " , fileSizeDownloaded + " of " + fileSize);
+                }
+
+                outputStream.flush();
+
+                return true;
+            } catch (IOException e) {
+                return false;
+            } finally {
+                if (inputStream != null) {
+                    inputStream.close();
+                }
+
+                if (outputStream != null) {
+                    outputStream.close();
+                }
+            }
+        } catch (IOException e) {
+            return false;
         }
     }
 }

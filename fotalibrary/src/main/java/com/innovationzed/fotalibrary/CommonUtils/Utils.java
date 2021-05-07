@@ -110,6 +110,12 @@ public class Utils {
         }
     }
 
+    /**
+     * Broadcasts an action specifying how OTA was finished and the reason
+     * @param context
+     * @param action describing how OTA was finished (ex: ACTION_FOTA_FAIL)
+     * @param reason for finishing this way (error message etc)
+     */
     public static void broadcastOTAFinished(Context context, String action, String reason){
         Intent otaFinishedIntent = new Intent(action);
         Bundle bundle = new Bundle();
@@ -118,53 +124,39 @@ public class Utils {
         BluetoothLeService.sendLocalBroadcastIntent(context, otaFinishedIntent);
     }
 
-    public static boolean writeResponseBodyToDisk(ResponseBody body, String path) {
-        try {
-            File latestFirmwareFile = new File(path);
+    /**
+     * Compares two version number strings
+     *
+     * @param version1
+     * @param version2
+     * @return  1 if version1 > version2
+     *          0 if version1 = version2
+     *          -1 if version1 < version2
+     */
+    public static int compareVersion(String version1, String version2) {
+        String[] array1 = version1.split("\\.");
+        String[] array2 = version2.split("\\.");
 
-            InputStream inputStream = null;
-            OutputStream outputStream = null;
-
-            try {
-                byte[] fileReader = new byte[4096];
-
-                long fileSize = body.contentLength();
-                long fileSizeDownloaded = 0;
-
-                inputStream = body.byteStream();
-                outputStream = new FileOutputStream(latestFirmwareFile);
-
-                while (true) {
-                    int read = inputStream.read(fileReader);
-
-                    if (read == -1) {
-                        break;
-                    }
-
-                    outputStream.write(fileReader, 0, read);
-
-                    fileSizeDownloaded += read;
-
-                    Log.d("File Download: " , fileSizeDownloaded + " of " + fileSize);
+        int i = 0;
+        while (i < array1.length || i < array2.length){
+            if (i < array1.length && i < array2.length){
+                if (Integer.parseInt(array1[i]) < Integer.parseInt(array2[i])) {
+                    return -1;
+                } else if (Integer.parseInt(array1[i]) > Integer.parseInt(array2[i])) {
+                    return 1;
                 }
-
-                outputStream.flush();
-
-                return true;
-            } catch (IOException e) {
-                return false;
-            } finally {
-                if (inputStream != null) {
-                    inputStream.close();
+            } else if (i < array1.length) {
+                if (Integer.parseInt(array1[i]) != 0) {
+                    return 1;
                 }
-
-                if (outputStream != null) {
-                    outputStream.close();
+            } else if (i < array2.length) {
+                if (Integer.parseInt(array2[i]) != 0) {
+                    return -1;
                 }
             }
-        } catch (IOException e) {
-            return false;
+            i++;
         }
+        return 0;
     }
 
     /**

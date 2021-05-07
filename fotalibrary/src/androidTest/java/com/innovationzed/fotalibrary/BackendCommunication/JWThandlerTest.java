@@ -4,7 +4,6 @@ import android.content.Context;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
-import com.innovationzed.fotalibrary.BackendCommunication.JWThandler;
 import com.innovationzed.fotalibrary.R;
 
 import org.junit.After;
@@ -17,8 +16,9 @@ import java.util.Date;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class JWThandlerTest {
     public Context testContext;
@@ -26,7 +26,6 @@ public class JWThandlerTest {
     @Before
     public void setUp() throws Exception {
         testContext = InstrumentationRegistry.getInstrumentation().getContext();
-        //PowerMockito.mockStatic(System.class);
     }
 
     @After

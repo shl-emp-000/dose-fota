@@ -66,12 +66,12 @@ public class DeviceInformationService {
     private final static int NBR_CHARACTERISTICS = 2; // TODO: should be 6 for real device, but example app only has 2
 
     // Data variables
-    private static String mManufacturerName;
-    private static String mModelNumber;
-    private static String mSerialNumber;
-    private static String mHardwareRevision;
-    private static String mFirmwareRevision;
-    private static String mSoftwareRevision;
+    private String mManufacturerName;
+    private String mModelNumber;
+    private String mSerialNumber;
+    private String mHardwareRevision;
+    private String mFirmwareRevision;
+    private String mSoftwareRevision;
 
     /**
      * BroadcastReceiver for receiving updates from the GATT server
@@ -146,7 +146,7 @@ public class DeviceInformationService {
         BluetoothLeService.unregisterBroadcastReceiver(context, mGattUpdateReceiver);
     }
 
-    public static Dictionary getDeviceInformation(){
+    public Dictionary getDeviceInformation(){
         Dictionary deviceInfo = new Hashtable();
         deviceInfo.put("ManufacturerName", mManufacturerName);
         deviceInfo.put("ModelNumber", mModelNumber);
