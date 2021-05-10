@@ -42,6 +42,51 @@ public class Constants {
     public static String PACKAGE_NAME;
 
     /**
+     * Actions that can be broadcasted by fotalibrary that the 3rd party app should receive
+     */
+    public final static String ACTION_FOTA_BLE_CONNECTION_FAILED =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_BLE_CONNECTION_FAILED";
+    public final static String ACTION_FOTA_COULD_NOT_BE_STARTED =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_COULD_NOT_BE_STARTED";
+    public final static String ACTION_FOTA_FAIL =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_FAIL";
+    public final static String ACTION_FOTA_FILE_DOWNLOAD_FAILED =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_FILE_DOWNLOAD_FAILED";
+    public final static String ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ";
+    public final static String ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ";
+    public final static String ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE";
+    public final static String ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE";
+    public final static String ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS";
+    public final static String ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION";
+    public final static String ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED";
+    public final static String ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED";
+    public final static String ACTION_FOTA_POSSIBLE =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_POSSIBLE";
+    public final static String ACTION_FOTA_SUCCESS =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_SUCCESS";
+    public final static String ACTION_FOTA_TIMEOUT =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_TIMEOUT";
+
+    /**
+     * Actions that is only used internally in FotaApi
+     */
+    public final static String ACTION_FOTA_DEVICE_BATTERY_READ =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_DEVICE_BATTERY_READ";
+    public final static String ACTION_FOTA_DEVICE_INFO_READ =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_DEVICE_INFO_READ";
+    public final static String ACTION_FOTA_FILE_DOWNLOADED =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_FILE_DOWNLOADED";
+
+
+    /**
      * Extras Constants
      */
     public static final String EXTRA_MANUFACTURER_NAME = "com.innovationzed.cysmart.backgroundservices." +

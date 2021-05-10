@@ -51,8 +51,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FAIL;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_SUCCESS;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_FAIL;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_SUCCESS;
 
 public class OTAFUHandler_v1 extends OTAFUHandlerBase {
 

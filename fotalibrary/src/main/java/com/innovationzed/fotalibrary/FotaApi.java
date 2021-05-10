@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 
+import com.innovationzed.fotalibrary.BLEConnectionServices.BatteryInformationService;
 import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
 import com.innovationzed.fotalibrary.BLEConnectionServices.DeviceInformationService;
 import com.innovationzed.fotalibrary.BackendCommunication.BackendApiRequest;
@@ -45,49 +46,34 @@ import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeSer
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_CONNECTED;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_BLE_CONNECTION_FAILED;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_COULD_NOT_BE_STARTED;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_DEVICE_BATTERY_READ;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_DEVICE_INFO_READ;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_FAIL;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_FILE_DOWNLOADED;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_FILE_DOWNLOAD_FAILED;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_POSSIBLE;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_SUCCESS;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_TIMEOUT;
 import static com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase.UUID_IMMEDIATE_ALERT_SERVICE;
 import static com.innovationzed.fotalibrary.CommonUtils.Utils.OTA_REASON;
 
 public class FotaApi {
 
-    public static String macAddress;
-    public static String latestFirmwareVersion;
-    public static String DOWNLOADED_FIRMWARE_DIR;
     public static final String ROOT_DIR = "/storage/emulated/0/Download";
 
-    /**
-     * Actions that can be broadcasted by fotalibrary
-     */
-    public final static String ACTION_FOTA_SUCCESS =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_SUCCESS";
-    public final static String ACTION_FOTA_FAIL =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_FAIL";
-    public final static String ACTION_FOTA_TIMEOUT =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_TIMEOUT";
-    public final static String ACTION_FOTA_COULD_NOT_BE_STARTED =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_COULD_NOT_BE_STARTED";
-    public final static String ACTION_FOTA_BLE_CONNECTION_FAILED =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_BLE_CONNECTION_FAILED";
-    public final static String ACTION_FOTA_FILE_DOWNLOADED =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_FILE_DOWNLOADED";
-    public final static String ACTION_FOTA_FILE_DOWNLOAD_FAILED =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_FILE_DOWNLOAD_FAILED";
-    public final static String ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED";
-    public final static String ACTION_FOTA_NO_UPDATE_EXISTS =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_NO_UPDATE_EXISTS";
-    public final static String ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION";
-    public final static String ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE";
-    public final static String ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE";
-    public final static String ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED";
-    public final static String ACTION_FOTA_POSSIBLE =
-            "com.innovationzed.fotalibrary.ACTION_FOTA_POSSIBLE";
-    public final static String ACTION_DEVICE_INFO_READ =
-            "com.innovationzed.fotalibrary.ACTION_DEVICE_INFO_READ";
+    public static String macAddress;
+    public static String latestFirmwareVersion;
+    public static String downloadedFirmwareDir;
 
     private static Context mContext;
     private static Intent mOTAServiceIntent;
@@ -95,11 +81,11 @@ public class FotaApi {
     private static Dictionary mDeviceInformation;
     private static BackendApiRequest mBackend;
     private static DeviceInformationService mDeviceInformationService;
+    private static BatteryInformationService mBatteryInformationService;
 
     private static boolean mUpdatePossible = false;
     private static boolean mShouldPostToBackend = false;
     private static boolean mUserConfirmation = false;
-
     private static boolean isInitialized = false;
     private static boolean mShouldListen = false;
     private static boolean mHasStartedBonding = false;
@@ -107,23 +93,33 @@ public class FotaApi {
     private static boolean mHasBonded = false;
     private static boolean mServiceDiscoveryStarted = false;
     private static boolean mFileDownloadStarted = false;
+    private static boolean mHasCheckedUpdatePossible = false;
 
+    /**
+     * The different states we can be in
+     */
     private static final int STATE_READ_DEVICE_INFO = 0;
     private static final int STATE_JUMP_TO_BOOT = 1;
     private static final int STATE_START_FOTA = 2;
     private static int mNextState = STATE_READ_DEVICE_INFO;
 
-    private Handler mTimeoutHandler;
+    /**
+     * Variables for timeout handling
+     */
+    private static Handler mTimeoutHandler;
     private static final int CHECK_FIRMWARE_UPDATE_TIME_LIMIT = 30000;
     private static final int FOTA_PROGRESS_TIME_LIMIT = 90000; // Longer since it involves user interaction
 
     private Runnable mFotaProgressRunnable = new Runnable() {
         @Override
         public void run() {
-            try{
-                OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "FOTA timed out.");
-            } catch (Exception e) {
-                OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "Error during check for FOTA timeout.");
+            if (!mIsFotaInProgress) {
+                mShouldPostToBackend = true;
+                try {
+                    OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "FOTA timed out.");
+                } catch (Exception e) {
+                    OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "Error during check for FOTA timeout.");
+                }
             }
         }
     };
@@ -131,14 +127,20 @@ public class FotaApi {
     private Runnable mCheckFirmwareRunnable = new Runnable() {
         @Override
         public void run() {
-            try{
-                OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "Check for firmware update timed out.");
-            } catch (Exception e) {
-                OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "Error during check for firmware update timeout.");
+            if (!mHasCheckedUpdatePossible) {
+                mShouldPostToBackend = true;
+                try {
+                    OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "Check for firmware update timed out.");
+                } catch (Exception e) {
+                    OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "Error during check for firmware update timeout.");
+                }
             }
         }
     };
 
+    /**
+     * BroadcastReceiver that handles the BLE connection flow and the FOTA flow
+     */
     private BroadcastReceiver mOTAStatusReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -181,8 +183,12 @@ public class FotaApi {
                         // services has been discovered and it has been paired, jump to boot or do fota
                         if (mNextState == STATE_READ_DEVICE_INFO) {
                             BluetoothGattService service = BluetoothLeService.getService(UUIDDatabase.UUID_DEVICE_INFORMATION_SERVICE);
-                            mDeviceInformationService = DeviceInformationService.create(service);
-                            mDeviceInformationService.startReadingDeviceInfo(mContext);
+                            if (service != null) {
+                                mDeviceInformationService = DeviceInformationService.create(service);
+                                mDeviceInformationService.startReadingDeviceInfo(mContext);
+                            } else {
+                                broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ);
+                            }
                         } else if (mNextState == STATE_JUMP_TO_BOOT) {
                             jumpToBoot();
                         } else if (mNextState == STATE_START_FOTA && !mFileDownloadStarted) {
@@ -191,7 +197,7 @@ public class FotaApi {
                         }
                     } else if (action.equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL) && mHasBonded) {
                         broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
-                    } else if (mUpdatePossible && mUserConfirmation && (action.equals(ACTION_FOTA_SUCCESS) || action.equals(ACTION_FOTA_FAIL))) {
+                    } else if (action.equals(ACTION_FOTA_SUCCESS) || action.equals(ACTION_FOTA_FAIL) || action.equals(ACTION_FOTA_TIMEOUT)) {
                         Boolean success = action.equals(ACTION_FOTA_SUCCESS) ? true : false;
                         String reason = action.equals(ACTION_FOTA_SUCCESS) ? "N/A" : "Default fail message";
 
@@ -199,7 +205,11 @@ public class FotaApi {
                         if (bundle.containsKey(OTA_REASON)) {
                             reason = bundle.getString(OTA_REASON);
                         }
+
                         if (mShouldPostToBackend) {
+                            if (mDeviceInformation == null) {
+                                mDeviceInformation = mDeviceInformationService.getDeviceInformation();
+                            }
                             mBackend.postFotaResult(success, reason, mDeviceInformation);
                             mShouldPostToBackend = false;
                         }
@@ -210,10 +220,23 @@ public class FotaApi {
                         mIsFotaInProgress = true;
                         mTimeoutHandler.removeCallbacks(mFotaProgressRunnable);
                         mContext.startService(mOTAServiceIntent);
-                    } else if (action.equals(ACTION_DEVICE_INFO_READ)) {
+                    } else if (action.equals(ACTION_FOTA_DEVICE_INFO_READ)) {
                         mDeviceInformationService.stop(mContext);
                         mDeviceInformation = mDeviceInformationService.getDeviceInformation();
-                        mDeviceInformation.put("BatteryLevel", 75);
+
+                        // Read battery level
+                        BluetoothGattService service = BluetoothLeService.getService(UUIDDatabase.UUID_BATTERY_SERVICE);
+                        if (service != null) {
+                            mBatteryInformationService = BatteryInformationService.create(service);
+                            mBatteryInformationService.startReadingBatteryInfo(mContext);
+                        } else {
+                            broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ);
+                        }
+
+                    } else if (action.equals(ACTION_FOTA_DEVICE_BATTERY_READ)) {
+                        mBatteryInformationService.stopReadingBatteryInfo(mContext);
+                        int battery = mBatteryInformationService.getBatteryLevel();
+                        mDeviceInformation.put("BatteryLevel", battery);
                         checkRemainingPrerequisites();
                     }
                 }
@@ -236,7 +259,7 @@ public class FotaApi {
             mTimeoutHandler = new Handler();
 
             // Register receiver
-            BluetoothLeService.registerBroadcastReceiver(mContext, mOTAStatusReceiver, Utils.makeOTAIntentFilter());
+            BluetoothLeService.registerBroadcastReceiver(mContext, mOTAStatusReceiver, Utils.makeFotaApiIntentFilter());
 
             // Start BLE service
             mContext.startService(mBluetoothLeServiceIntent);
@@ -249,6 +272,7 @@ public class FotaApi {
 
     /**
      * Change device. This needs to be done before isFirmwareUpdatePossible and doFirmwareUpdate is called
+     * @param macAddress
      */
     public void changeDevice(String macAddress){
         this.macAddress = macAddress;
@@ -257,14 +281,11 @@ public class FotaApi {
 
     /**
      * Checks if a firmware update is possible. The following criteria applies:
+     * - app permissions are granted
      * - phone battery level (>= 50%)
      * - device battery level (>= 50%)
      * - phone connected to wifi
      * - firmware update exists
-     *
-     * When the check is done one of the following actions will be broadcasted:
-     * - ACTION_FOTA_POSSIBLE
-     * - ACTION_FOTA_NOT_POSSIBLE
      */
     public void isFirmwareUpdatePossible(){
         if (!mUpdatePossible){
@@ -278,11 +299,6 @@ public class FotaApi {
      * Update the firmware over-the-air via BLE
      *
      * @param userConfirmation: if the user has confirmed that they want to do a firmware update of their device
-     *
-     * If the firmware update finishes successfully the following action will be broadcasted:
-     * - ACTION_FOTA_SUCCESS
-     * If the firmware update fails the following action will be broadcasted:
-     * - ACTION_FOTA_FAIL
      */
     public void doFirmwareUpdate(boolean userConfirmation){
         mUserConfirmation = userConfirmation;
@@ -299,11 +315,11 @@ public class FotaApi {
             int connectionState = BluetoothLeService.getConnectionState(device);
             if (device.getBondState() == BOND_BONDED && connectionState == STATE_CONNECTED){
                 if (!BluetoothLeService.connect(FotaApi.macAddress, mContext)){
-                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_COULD_NOT_BE_STARTED, "Initial connection to device failed");
+                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_BLE_CONNECTION_FAILED, "Initial connection to device failed");
                 }
             } else {
                 // Broadcast message saying that FOTA could not be started because the device isn't bonded and connected
-                Utils.broadcastOTAFinished(mContext, ACTION_FOTA_COULD_NOT_BE_STARTED, "Device is not bonded and connected");
+                Utils.broadcastOTAFinished(mContext, ACTION_FOTA_BLE_CONNECTION_FAILED, "Device is not bonded and connected");
             }
         }
         else {
@@ -345,7 +361,7 @@ public class FotaApi {
                 boolean writtenToDisk = writeResponseBodyToDisk(response.body(), firmwarePath);
 
                 if (writtenToDisk) {
-                    DOWNLOADED_FIRMWARE_DIR = firmwarePath;
+                    downloadedFirmwareDir = firmwarePath;
                     broadcastFOTAProgress(ACTION_FOTA_FILE_DOWNLOADED);
                 } else {
                     broadcastFirmwareCheck(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
@@ -362,15 +378,7 @@ public class FotaApi {
     }
 
     /**
-     * Checks if a firmware update is possible. The following criteria applies:
-     * - phone battery level (>= 50%)
-     * - device battery level (>= 50%)
-     * - phone connected to wifi
-     * - firmware update exists
-     *
-     * When the check is done one of the following actions will be broadcasted:
-     * - ACTION_FOTA_POSSIBLE
-     * - ACTION_FOTA_NOT_POSSIBLE
+     * Checks if a firmware update is possible.
      */
     private void checkFirmwareUpdatePossible(){
         // Timeout check
@@ -402,7 +410,7 @@ public class FotaApi {
     }
 
     /**
-     *
+     * Checks the remaining FOTA pre-reqs after reading info from the device.
      */
     private void checkRemainingPrerequisites(){
         // Get latest available firmware version and do the checks on response
@@ -420,7 +428,7 @@ public class FotaApi {
                 latestFirmwareVersion = versions.get(0).getFirmwareVersion();
                 boolean updateExists = (Utils.compareVersion((String)mDeviceInformation.get("FirmwareRevision"), latestFirmwareVersion) < 0);
                 if (!updateExists){
-                    broadcastFirmwareCheck(ACTION_FOTA_NO_UPDATE_EXISTS);
+                    broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS);
                     return;
                 }
 
@@ -478,6 +486,7 @@ public class FotaApi {
      */
     private void broadcastFirmwareCheck(String action){
         mShouldListen = false;
+        mHasCheckedUpdatePossible = true;
         mTimeoutHandler.removeCallbacks(mCheckFirmwareRunnable);
         Intent intent = new Intent(action);
         BluetoothLeService.sendLocalBroadcastIntent(mContext, intent);
@@ -493,6 +502,7 @@ public class FotaApi {
         mIsFotaInProgress = false;
         mShouldListen = false;
         mFileDownloadStarted = false;
+        mHasCheckedUpdatePossible = false;
         resetBLEConnectionVariables();
 
         mNextState = STATE_READ_DEVICE_INFO;
@@ -530,7 +540,7 @@ public class FotaApi {
                             OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "FOTA failed during jump to boot. " + e.getMessage());
                         }
                     }
-                }, 1000);
+                }, 1500);
 
             } else {
                 OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "FOTA failed during jump to boot. Alert level characteristic not found.");

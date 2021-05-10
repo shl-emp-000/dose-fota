@@ -64,22 +64,25 @@ import java.util.regex.Pattern;
 
 import okhttp3.ResponseBody;
 
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_DEVICE_INFO_READ;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_BLE_CONNECTION_FAILED;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_COULD_NOT_BE_STARTED;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FAIL;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FILE_DOWNLOADED;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FILE_DOWNLOAD_FAILED;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_NO_UPDATE_EXISTS;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_POSSIBLE;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_SUCCESS;
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_TIMEOUT;
-import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_BLE_CONNECTION_FAILED;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_COULD_NOT_BE_STARTED;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_DEVICE_BATTERY_READ;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_DEVICE_INFO_READ;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_FAIL;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_FILE_DOWNLOADED;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_FILE_DOWNLOAD_FAILED;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_POSSIBLE;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_SUCCESS;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_TIMEOUT;
+import static com.innovationzed.fotalibrary.FotaApi.downloadedFirmwareDir;
 
 /**
  * Class for commonly used methods in the project
@@ -102,8 +105,8 @@ public class Utils {
      */
     public static void deleteFirmwareFile(){
         // Delete firmware file
-        if (DOWNLOADED_FIRMWARE_DIR != null){
-            File file = new File(DOWNLOADED_FIRMWARE_DIR);
+        if (downloadedFirmwareDir != null){
+            File file = new File(downloadedFirmwareDir);
             if (file.exists()) {
                 file.delete();
             }
@@ -258,7 +261,7 @@ public class Utils {
     }
 
     /**
-     * Adding the necessary INtent filters for Broadcast receivers
+     * Adding the necessary Intent filters for Broadcast receivers
      *
      * @return {@link IntentFilter}
      */
@@ -292,23 +295,62 @@ public class Utils {
         return filter;
     }
 
-    public static IntentFilter makeOTAIntentFilter(){
-        final IntentFilter filter = makeGattUpdateIntentFilter();
-        filter.addAction(ACTION_FOTA_SUCCESS);
-        filter.addAction(ACTION_FOTA_FAIL);
-        filter.addAction(ACTION_FOTA_COULD_NOT_BE_STARTED);
+    /**
+     * Adding the necessary Intent filters for 3rd party broadcast receivers
+     *
+     * @return {@link IntentFilter}
+     */
+    public static IntentFilter make3rdPartyIntentFilter(){
+        final IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_FOTA_BLE_CONNECTION_FAILED);
-        filter.addAction(ACTION_FOTA_POSSIBLE);
-        filter.addAction(ACTION_DEVICE_INFO_READ);
-        filter.addAction(ACTION_FOTA_NO_UPDATE_EXISTS);
+        filter.addAction(ACTION_FOTA_COULD_NOT_BE_STARTED);
+        filter.addAction(ACTION_FOTA_FAIL);
+        filter.addAction(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ);
         filter.addAction(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE);
         filter.addAction(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE);
-        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS);
         filter.addAction(ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED);
         filter.addAction(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
-        filter.addAction(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
-        filter.addAction(ACTION_FOTA_FILE_DOWNLOADED);
+        filter.addAction(ACTION_FOTA_POSSIBLE);
+        filter.addAction(ACTION_FOTA_SUCCESS);
         filter.addAction(ACTION_FOTA_TIMEOUT);
+        return filter;
+    }
+
+    /**
+     * Adding the necessary Intent filters for Broadcast receiver in FotaApi
+     *
+     * @return {@link IntentFilter}
+     */
+    public static IntentFilter makeFotaApiIntentFilter(){
+        // BLE actions
+        final IntentFilter filter = makeGattUpdateIntentFilter();
+
+        // Internal actions
+        filter.addAction(ACTION_FOTA_DEVICE_BATTERY_READ);
+        filter.addAction(ACTION_FOTA_DEVICE_INFO_READ);
+        filter.addAction(ACTION_FOTA_FILE_DOWNLOADED);
+
+        // Actions that are also received by 3rd party app
+        filter.addAction(ACTION_FOTA_BLE_CONNECTION_FAILED);
+        filter.addAction(ACTION_FOTA_COULD_NOT_BE_STARTED);
+        filter.addAction(ACTION_FOTA_FAIL);
+        filter.addAction(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED);
+        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
+        filter.addAction(ACTION_FOTA_POSSIBLE);
+        filter.addAction(ACTION_FOTA_SUCCESS);
+        filter.addAction(ACTION_FOTA_TIMEOUT);
+
         return filter;
     }
 

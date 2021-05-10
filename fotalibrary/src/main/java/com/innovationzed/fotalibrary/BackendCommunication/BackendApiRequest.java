@@ -2,7 +2,6 @@ package com.innovationzed.fotalibrary.BackendCommunication;
 
 import android.content.Context;
 
-import com.innovationzed.fotalibrary.CommonUtils.Utils;
 import com.innovationzed.fotalibrary.FotaApi;
 
 import java.text.SimpleDateFormat;
@@ -18,6 +17,7 @@ import retrofit2.Retrofit;
 
 public class BackendApiRequest {
     private final int MAX_RETRIES = 5;
+    private final String BASE_URL = "https://iz-test-app.azurewebsites.net/api/";
 
     private Retrofit mRetrofit;
     private IzFotaApi mIzFotaApi;
@@ -32,20 +32,36 @@ public class BackendApiRequest {
         mSdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
 
         // Set up retrofit
-        mRetrofit = RetrofitClient.getClient("https://iz-test-app.azurewebsites.net/api/");
+        mRetrofit = RetrofitClient.getClient(BASE_URL);
         mIzFotaApi = mRetrofit.create(IzFotaApi.class);
     }
 
+    /**
+     * Gets the latest available firmware version. A callback is provided so that the caller can handle
+     * the response in any way they like
+     * @param callback
+     */
     public void getLatestFirmwareVersion(Callback<List<Firmware>> callback){
         Call<List<Firmware>> call = mIzFotaApi.getLatestFirmwareVersion(JWThandler.getAuthToken(mContext));
         call.enqueue(callback);
     }
 
+    /**
+     * Downloads the latest available firmware file. A callback is provided so that the caller can handle
+     * the response in any way they like
+     * @param callback
+     */
     public void downloadLatestFirmwareFile(Callback<ResponseBody> callback){
         Call<ResponseBody> call = mIzFotaApi.downloadLatestFirmware(JWThandler.getAuthToken(mContext));
         call.enqueue(callback);
     }
 
+    /**
+     * Posts info to the backend about an attempted update
+     * @param success boolean that is true if firmware update was successful, else false
+     * @param reason String with a description how the fimware update went, mainly useful when the update failed
+     * @param deviceInfo a Dictionary containing information about the device, like batteryLevel and serialNumber
+     */
     public void postFotaResult(boolean success, String reason, Dictionary deviceInfo) {
         String date = mSdf.format(new Date(System.currentTimeMillis()));
         //Dictionary deviceInfo = Utils.getDeviceInformation();

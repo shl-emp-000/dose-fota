@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.UUID;
 
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_DEVICE_INFO_READ;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_DEVICE_INFO_READ;
 
 /**
  * Fragment to display the Device Information Service
@@ -118,7 +118,7 @@ public class DeviceInformationService {
 
                 // all characteristics read
                 if (nbrCharacteristicsRead == NBR_CHARACTERISTICS){
-                    BluetoothLeService.sendLocalBroadcastIntent(mContext, new Intent(ACTION_DEVICE_INFO_READ));
+                    BluetoothLeService.sendLocalBroadcastIntent(mContext, new Intent(ACTION_FOTA_DEVICE_INFO_READ));
                     nbrCharacteristicsRead = 0;
                 }
             }

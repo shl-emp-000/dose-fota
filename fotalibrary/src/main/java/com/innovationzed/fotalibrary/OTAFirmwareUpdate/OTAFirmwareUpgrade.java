@@ -58,8 +58,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.List;
 
-import static com.innovationzed.fotalibrary.FotaApi.ACTION_FOTA_FAIL;
-import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_FAIL;
+import static com.innovationzed.fotalibrary.FotaApi.downloadedFirmwareDir;
 
 /**
  * OTA update service
@@ -122,6 +122,9 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         doFota();
     }
 
+    /**
+     * Starts the FOTA process. Is called in onCreate when the service is started
+     */
     private void doFota(){
         mOtaService = BluetoothLeService.getService(UUIDDatabase.UUID_OTA_UPDATE_SERVICE);
         if(mOtaService != null){
@@ -130,9 +133,9 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
                 OTAFinished(this, ACTION_FOTA_FAIL, "getGattData() failed (OTAFirmwareUpgrade.mOtaCharacteristic is null)");
             }
 
-            boolean isCyacd2File = DOWNLOADED_FIRMWARE_DIR != null && isCyacd2File(DOWNLOADED_FIRMWARE_DIR);
+            boolean isCyacd2File = downloadedFirmwareDir != null && isCyacd2File(downloadedFirmwareDir);
             Utils.setBooleanSharedPreference(this, Constants.PREF_IS_CYACD2_FILE, isCyacd2File);
-            mOTAFUHandler = new OTAFUHandler_v1(this, OTAFirmwareUpgrade.mOtaCharacteristic, DOWNLOADED_FIRMWARE_DIR, this);
+            mOTAFUHandler = new OTAFUHandler_v1(this, OTAFirmwareUpgrade.mOtaCharacteristic, downloadedFirmwareDir, this);
 
             try {
                 mOTAFUHandler.prepareFileWrite();
