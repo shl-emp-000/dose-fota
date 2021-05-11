@@ -37,12 +37,9 @@ import retrofit2.Response;
 
 import static android.bluetooth.BluetoothDevice.ACTION_BOND_STATE_CHANGED;
 import static android.bluetooth.BluetoothDevice.BOND_BONDED;
-import static android.bluetooth.BluetoothDevice.BOND_BONDING;
 import static android.bluetooth.BluetoothDevice.BOND_NONE;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_CONNECTED;
-import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_CONNECTING;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_DISCONNECTED;
-import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_DISCONNECTING;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL;
 import static com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService.STATE_CONNECTED;
@@ -64,6 +61,7 @@ import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NO
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_POSSIBLE;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_SUCCESS;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_TIMEOUT;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.DEVICE_BOOT_NAME;
 import static com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase.UUID_IMMEDIATE_ALERT_SERVICE;
 import static com.innovationzed.fotalibrary.CommonUtils.Utils.OTA_REASON;
 
@@ -75,33 +73,20 @@ public class FotaApi {
     public static String latestFirmwareVersion;
     public static String downloadedFirmwareDir;
 
-    private static Context mContext;
-    private static Intent mOTAServiceIntent;
-    private static Intent mBluetoothLeServiceIntent;
-    private static Dictionary mDeviceInformation;
-    private static BackendApiRequest mBackend;
-    private static DeviceInformationService mDeviceInformationService;
-    private static BatteryInformationService mBatteryInformationService;
-
     private static boolean mUpdatePossible = false;
     private static boolean mShouldPostToBackend = false;
-    private static boolean mUserConfirmation = false;
     private static boolean isInitialized = false;
-    private static boolean mShouldListen = false;
-    private static boolean mHasStartedBonding = false;
     private static boolean mIsFotaInProgress = false;
-    private static boolean mHasBonded = false;
-    private static boolean mServiceDiscoveryStarted = false;
-    private static boolean mFileDownloadStarted = false;
     private static boolean mHasCheckedUpdatePossible = false;
 
-    /**
-     * The different states we can be in
-     */
-    private static final int STATE_READ_DEVICE_INFO = 0;
-    private static final int STATE_JUMP_TO_BOOT = 1;
-    private static final int STATE_START_FOTA = 2;
-    private static int mNextState = STATE_READ_DEVICE_INFO;
+    private static Intent mOTAServiceIntent;
+    private static Dictionary mDeviceInformation;
+
+    private final Context mContext;
+    private final BackendApiRequest mBackend;
+
+    private DeviceInformationService mDeviceInformationService;
+    private BatteryInformationService mBatteryInformationService;
 
     /**
      * Variables for timeout handling
@@ -141,104 +126,149 @@ public class FotaApi {
     /**
      * BroadcastReceiver that handles the BLE connection flow and the FOTA flow
      */
-    private BroadcastReceiver mOTAStatusReceiver = new BroadcastReceiver() {
+    private BroadcastReceiver mAppModeReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             synchronized (this) {
                 final String action = intent.getAction();
-                if (mShouldListen) {
-                    if (action.equals(ACTION_BOND_STATE_CHANGED)) {
-                        if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDING) {
-                            // Do nothing, waiting for bonding to complete
-                            mHasStartedBonding = true;
-                        } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_NONE && !mHasStartedBonding) {
-                            BluetoothLeService.getRemoteDevice().createBond();
-                        } else if (BluetoothLeService.getRemoteDevice().getBondState() == BOND_BONDED && mHasStartedBonding) {
-                            mHasBonded = true;
-                            if (BluetoothLeService.getConnectionState() == STATE_CONNECTED && !mServiceDiscoveryStarted) {
-                                mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
-                            } else { // connect again if it is paired but not currently connected
-                                BluetoothLeService.connect(FotaApi.macAddress, context);
-                            }
-                        }
-                    } else if (action.equals(ACTION_GATT_CONNECTED)) {
-                        if (mHasBonded && !mServiceDiscoveryStarted) {
-                            // if it is paired and connected we should discover services
-                            mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
-                        } else {
-                            // this is where it goes after initial connect
-                            if (BluetoothLeService.getRemoteDevice().getBondState() == BluetoothDevice.BOND_BONDED) {
-                                mServiceDiscoveryStarted = BluetoothLeService.discoverServices();
-                            } else {
-                                BluetoothLeService.getRemoteDevice().createBond();
-                            }
-                        }
-                    } else if (action.equals(ACTION_GATT_CONNECTING)) {
-                        // wait for connection...
-                    } else if (action.equals(ACTION_GATT_DISCONNECTING)) {
-                        // wait for disconnection...
-                    } else if (action.equals(ACTION_GATT_DISCONNECTED)) {
-                        // do nothing for now, it can get disconnected when re-pairing
-                    } else if (action.equals(ACTION_GATT_SERVICES_DISCOVERED)) {
-                        // services has been discovered and it has been paired, jump to boot or do fota
-                        if (mNextState == STATE_READ_DEVICE_INFO) {
-                            BluetoothGattService service = BluetoothLeService.getService(UUIDDatabase.UUID_DEVICE_INFORMATION_SERVICE);
-                            if (service != null) {
-                                mDeviceInformationService = DeviceInformationService.create(service);
-                                mDeviceInformationService.startReadingDeviceInfo(mContext);
-                            } else {
-                                broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ);
-                            }
-                        } else if (mNextState == STATE_JUMP_TO_BOOT) {
-                            jumpToBoot();
-                        } else if (mNextState == STATE_START_FOTA && !mFileDownloadStarted) {
-                            downloadFirmwareFile();
-                            mFileDownloadStarted = true;
-                        }
-                    } else if (action.equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL) && mHasBonded) {
-                        broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
-                    } else if (action.equals(ACTION_FOTA_SUCCESS) || action.equals(ACTION_FOTA_FAIL) || action.equals(ACTION_FOTA_TIMEOUT)) {
-                        Boolean success = action.equals(ACTION_FOTA_SUCCESS) ? true : false;
-                        String reason = action.equals(ACTION_FOTA_SUCCESS) ? "N/A" : "Default fail message";
-
-                        Bundle bundle = intent.getExtras();
-                        if (bundle.containsKey(OTA_REASON)) {
-                            reason = bundle.getString(OTA_REASON);
-                        }
-
-                        if (mShouldPostToBackend) {
-                            if (mDeviceInformation == null) {
-                                mDeviceInformation = mDeviceInformationService.getDeviceInformation();
-                            }
-                            mBackend.postFotaResult(success, reason, mDeviceInformation);
-                            mShouldPostToBackend = false;
-                        }
-                        mContext.stopService(mOTAServiceIntent);
-                        mTimeoutHandler.removeCallbacks(mFotaProgressRunnable);
-                        resetAllVariables();
-                    } else if (action.equals(ACTION_FOTA_FILE_DOWNLOADED) && !mIsFotaInProgress) {
-                        mIsFotaInProgress = true;
-                        mTimeoutHandler.removeCallbacks(mFotaProgressRunnable);
-                        mContext.startService(mOTAServiceIntent);
-                    } else if (action.equals(ACTION_FOTA_DEVICE_INFO_READ)) {
-                        mDeviceInformationService.stop(mContext);
-                        mDeviceInformation = mDeviceInformationService.getDeviceInformation();
-
-                        // Read battery level
-                        BluetoothGattService service = BluetoothLeService.getService(UUIDDatabase.UUID_BATTERY_SERVICE);
-                        if (service != null) {
-                            mBatteryInformationService = BatteryInformationService.create(service);
-                            mBatteryInformationService.startReadingBatteryInfo(mContext);
-                        } else {
-                            broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ);
-                        }
-
-                    } else if (action.equals(ACTION_FOTA_DEVICE_BATTERY_READ)) {
-                        mBatteryInformationService.stopReadingBatteryInfo(mContext);
-                        int battery = mBatteryInformationService.getBatteryLevel();
-                        mDeviceInformation.put("BatteryLevel", battery);
-                        checkRemainingPrerequisites();
+                if (action.equals(ACTION_GATT_CONNECTED)) {
+                    BluetoothLeService.discoverServices();
+                } else if (action.equals(ACTION_GATT_DISCONNECTED)){
+                    broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
+                } else if (action.equals(ACTION_GATT_SERVICES_DISCOVERED)) {
+                    BluetoothGattService service = BluetoothLeService.getService(UUIDDatabase.UUID_DEVICE_INFORMATION_SERVICE);
+                    if (service != null) {
+                        mDeviceInformationService = DeviceInformationService.create(service);
+                        mDeviceInformationService.startReadingDeviceInfo(mContext);
+                    } else {
+                        broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ);
                     }
+                } else if (action.equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL)) {
+                    broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
+                } else if (action.equals(ACTION_FOTA_DEVICE_INFO_READ)) {
+                    mDeviceInformationService.stop(mContext);
+                    mDeviceInformation = DeviceInformationService.getDeviceInformation();
+
+                    // Read battery level
+                    BluetoothGattService service = BluetoothLeService.getService(UUIDDatabase.UUID_BATTERY_SERVICE);
+                    if (service != null) {
+                        mBatteryInformationService = BatteryInformationService.create(service);
+                        mBatteryInformationService.startReadingBatteryInfo(mContext);
+                    } else {
+                        broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ);
+                    }
+                } else if (action.equals(ACTION_FOTA_DEVICE_BATTERY_READ)) {
+                    mBatteryInformationService.stopReadingBatteryInfo(mContext);
+                    int battery = BatteryInformationService.getBatteryLevel();
+                    mDeviceInformation.put("BatteryLevel", battery);
+                    checkRemainingPrerequisites();
+                }
+            }
+        }
+
+
+    };
+
+    /**
+     * BroadcastReceiver that handles the BLE connection flow and the FOTA flow
+     */
+    private BroadcastReceiver mDiscoverImmediateAlertServiceReceiver = new BroadcastReceiver() {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            synchronized (this) {
+                final String action = intent.getAction();
+                if (action.equals(ACTION_GATT_SERVICES_DISCOVERED)) {
+                    BluetoothLeService.unregisterBroadcastReceiver(mContext, mDiscoverImmediateAlertServiceReceiver);
+                    jumpToBoot();
+                } else if (action.equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL)) {
+                    // TODO: retry x times
+                    broadcastFirmwareCheck(ACTION_FOTA_COULD_NOT_BE_STARTED);
+                }
+            }
+
+        }
+    };
+
+    /**
+     * BroadcastReceiver for handling when the device is found in boot mode
+     */
+    private BroadcastReceiver mBootModeReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            synchronized (this) {
+                final String action = intent.getAction();
+                if (action.equals(BluetoothDevice.ACTION_FOUND)){
+                    // Look for the device in boot mode and unpair when it's found
+                    Bundle extras = intent.getExtras();
+                    BluetoothDevice device = extras.getParcelable(BluetoothDevice.EXTRA_DEVICE);
+
+                    if (device.getAddress().equals(FotaApi.macAddress) && device.getName().equals(DEVICE_BOOT_NAME)) {
+                        BluetoothLeService.stopDeviceScan();
+                        BluetoothLeService.unpairDevice(device);
+                    }
+                } else if (action.equals(ACTION_BOND_STATE_CHANGED)) {
+                    BluetoothDevice device = BluetoothLeService.getRemoteDevice();
+                    if (device.getBondState() == BOND_NONE){
+                        // Device in boot mode has unpaired, pair again to be able to discover OTA service
+                        device.createBond();
+                    } else if (device.getBondState() == BOND_BONDED) {
+                        BluetoothLeService.connect(FotaApi.macAddress, mContext);
+                    }
+                } else if (action.equals(ACTION_GATT_CONNECTED)) {
+                    if (!BluetoothLeService.discoverServices()){
+                        OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "Service discovery could not be started.");
+                    }
+                } else if (action.equals(ACTION_GATT_SERVICES_DISCOVERED)) {
+                    if (BluetoothLeService.getService(UUIDDatabase.UUID_OTA_UPDATE_SERVICE) != null){
+                        downloadFirmwareFile();
+                    } else {
+                        OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "Could not discover OTA service.");
+                    }
+                } else if (action.equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL)) {
+                    OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "Could not discover services"); // TODO: fix actions?
+                } else if (action.equals(ACTION_FOTA_FILE_DOWNLOADED) && !mIsFotaInProgress) {
+                    mIsFotaInProgress = true;
+                    BluetoothLeService.unregisterBroadcastReceiver(mContext, mBootModeReceiver);
+                    mTimeoutHandler.removeCallbacks(mFotaProgressRunnable);
+                    mContext.startService(mOTAServiceIntent);
+                } else if (action.equals(ACTION_FOTA_FILE_DOWNLOAD_FAILED)) {
+                    BluetoothLeService.unregisterBroadcastReceiver(mContext, mBootModeReceiver);
+                    mTimeoutHandler.removeCallbacks(mFotaProgressRunnable);
+                    resetAllVariables();
+                }
+            }
+        }
+    };
+
+    /**
+     * BroadcastReceiver for handling FOTA actions
+     */
+    private BroadcastReceiver mFOTAReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            synchronized (this) {
+                final String action = intent.getAction();
+                if (action.equals(ACTION_FOTA_SUCCESS) || action.equals(ACTION_FOTA_FAIL) || action.equals(ACTION_FOTA_TIMEOUT)) {
+                    boolean success = action.equals(ACTION_FOTA_SUCCESS);
+                    String reason = action.equals(ACTION_FOTA_SUCCESS) ? "N/A" : "Default fail message";
+
+                    Bundle bundle = intent.getExtras();
+                    if (bundle.containsKey(OTA_REASON)) {
+                        reason = bundle.getString(OTA_REASON);
+                    }
+
+                    if (mShouldPostToBackend) {
+                        if (mDeviceInformation == null) {
+                            mDeviceInformation = DeviceInformationService.getDeviceInformation();
+                        }
+                        mBackend.postFotaResult(success, reason, mDeviceInformation);
+                        mShouldPostToBackend = false;
+                    }
+                    mContext.stopService(mOTAServiceIntent);
+                    mTimeoutHandler.removeCallbacks(mFotaProgressRunnable);
+                    BluetoothLeService.unregisterBroadcastReceiver(mContext, mFOTAReceiver);
+                    resetAllVariables();
                 }
             }
         }
@@ -250,19 +280,19 @@ public class FotaApi {
      * @param macAddress: MAC address of the device
      */
     public FotaApi (Context context, String macAddress){
+        mContext = context;
+        mBackend = new BackendApiRequest(context);
+
         if (!isInitialized) {
-            this.macAddress = macAddress;
-            mContext = context;
+            FotaApi.macAddress = macAddress;
             mOTAServiceIntent = new Intent(mContext, OTAFirmwareUpgrade.class);
-            mBluetoothLeServiceIntent = new Intent(mContext, BluetoothLeService.class);
-            mBackend = new BackendApiRequest(context);
             mTimeoutHandler = new Handler();
 
             // Register receiver
-            BluetoothLeService.registerBroadcastReceiver(mContext, mOTAStatusReceiver, Utils.makeFotaApiIntentFilter());
+            BluetoothLeService.registerBroadcastReceiver(mContext, mFOTAReceiver, Utils.makeFotaApiIntentFilter());
 
             // Start BLE service
-            mContext.startService(mBluetoothLeServiceIntent);
+            mContext.startService(new Intent(mContext, BluetoothLeService.class));
 
             // Initialize variables
             resetAllVariables();
@@ -288,11 +318,10 @@ public class FotaApi {
      * - firmware update exists
      */
     public void isFirmwareUpdatePossible(){
-        if (!mUpdatePossible){
-            checkFirmwareUpdatePossible();
-        } else {
-            broadcastFirmwareCheck(ACTION_FOTA_POSSIBLE);
-        }
+        // Register receiver
+        BluetoothLeService.registerBroadcastReceiver(mContext, mAppModeReceiver, Utils.makeAppModeIntentFilter());
+
+        checkFirmwareUpdatePossible();
     }
 
     /**
@@ -301,11 +330,9 @@ public class FotaApi {
      * @param userConfirmation: if the user has confirmed that they want to do a firmware update of their device
      */
     public void doFirmwareUpdate(boolean userConfirmation){
-        mUserConfirmation = userConfirmation;
-        if (mUserConfirmation && mUpdatePossible){
+        BluetoothLeService.registerBroadcastReceiver(mContext, mDiscoverImmediateAlertServiceReceiver, Utils.makeGattUpdateIntentFilter());
+        if (userConfirmation && mUpdatePossible){
             mShouldPostToBackend = true;
-            mShouldListen = true;
-            resetBLEConnectionVariables();
 
             // Timeout check
             mTimeoutHandler.postDelayed(mFotaProgressRunnable, FOTA_PROGRESS_TIME_LIMIT);
@@ -314,12 +341,12 @@ public class FotaApi {
             BluetoothDevice device = BluetoothLeService.getRemoteDevice(FotaApi.macAddress);
             int connectionState = BluetoothLeService.getConnectionState(device);
             if (device.getBondState() == BOND_BONDED && connectionState == STATE_CONNECTED){
-                if (!BluetoothLeService.connect(FotaApi.macAddress, mContext)){
-                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_BLE_CONNECTION_FAILED, "Initial connection to device failed");
+                if (!BluetoothLeService.discoverServices()){
+                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_COULD_NOT_BE_STARTED, "Initial service discovery failed"); //TODO: change action?
                 }
             } else {
                 // Broadcast message saying that FOTA could not be started because the device isn't bonded and connected
-                Utils.broadcastOTAFinished(mContext, ACTION_FOTA_BLE_CONNECTION_FAILED, "Device is not bonded and connected");
+                Utils.broadcastOTAFinished(mContext, ACTION_FOTA_COULD_NOT_BE_STARTED, "Device is not bonded and connected");
             }
         }
         else {
@@ -385,7 +412,6 @@ public class FotaApi {
         mTimeoutHandler.postDelayed(mCheckFirmwareRunnable, CHECK_FIRMWARE_UPDATE_TIME_LIMIT);
 
         resetAllVariables();
-        mShouldListen = true;
 
         // Check permissions
         boolean permissions = mContext.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
@@ -457,8 +483,6 @@ public class FotaApi {
 
                 // If FOTA is possible, broadcast ACTION_FOTA_POSSIBLE
                 mUpdatePossible = true;
-                mNextState = STATE_JUMP_TO_BOOT;
-                resetBLEConnectionVariables();
                 broadcastFirmwareCheck(ACTION_FOTA_POSSIBLE);
             }
 
@@ -485,7 +509,7 @@ public class FotaApi {
      * @param action
      */
     private void broadcastFirmwareCheck(String action){
-        mShouldListen = false;
+        BluetoothLeService.unregisterBroadcastReceiver(mContext, mAppModeReceiver);
         mHasCheckedUpdatePossible = true;
         mTimeoutHandler.removeCallbacks(mCheckFirmwareRunnable);
         Intent intent = new Intent(action);
@@ -498,23 +522,8 @@ public class FotaApi {
     private void resetAllVariables(){
         mUpdatePossible = false;
         mShouldPostToBackend = false;
-        mUserConfirmation = false;
         mIsFotaInProgress = false;
-        mShouldListen = false;
-        mFileDownloadStarted = false;
         mHasCheckedUpdatePossible = false;
-        resetBLEConnectionVariables();
-
-        mNextState = STATE_READ_DEVICE_INFO;
-    }
-
-    /**
-     * Resets BLE connection variables to starting values
-     */
-    private void resetBLEConnectionVariables(){
-        mHasStartedBonding = false;
-        mHasBonded = false;
-        mServiceDiscoveryStarted = false;
     }
 
     /**
@@ -528,20 +537,9 @@ public class FotaApi {
             BluetoothGattCharacteristic gattCharacteristic = service.getCharacteristic(UUIDDatabase.UUID_ALERT_LEVEL);
             if (gattCharacteristic != null) {
                 BluetoothLeService.writeCharacteristicNoResponse(gattCharacteristic, convertedBytes);
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        try{
-                            resetBLEConnectionVariables();
-                            mNextState = STATE_START_FOTA;
-                            // unpair and pair again after jump to be able to discover OTA service
-                            BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice());
-                        } catch (Exception e) {
-                            OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "FOTA failed during jump to boot. " + e.getMessage());
-                        }
-                    }
-                }, 1500);
 
+                BluetoothLeService.registerBroadcastReceiver(mContext, mBootModeReceiver, Utils.makeBootModeIntentFilter());
+                BluetoothLeService.startDeviceScan();
             } else {
                 OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "FOTA failed during jump to boot. Alert level characteristic not found.");
             }

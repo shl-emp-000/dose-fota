@@ -17,7 +17,7 @@ import org.junit.Test;
 import java.io.File;
 
 import static com.innovationzed.fotalibrary.CommonUtils.Utils.OTA_REASON;
-import static com.innovationzed.fotalibrary.FotaApi.DOWNLOADED_FIRMWARE_DIR;
+import static com.innovationzed.fotalibrary.FotaApi.downloadedFirmwareDir;
 import static org.junit.Assert.assertTrue;
 
 public class UtilsTest {
@@ -43,7 +43,7 @@ public class UtilsTest {
     @Test
     public void deleteFirmwareFile() {
         File tempFile = testContext.getExternalCacheDir();
-        DOWNLOADED_FIRMWARE_DIR = tempFile.getAbsolutePath();
+        downloadedFirmwareDir = tempFile.getAbsolutePath();
         assertTrue(tempFile.exists());
         Utils.deleteFirmwareFile();
         assertTrue(!tempFile.exists());

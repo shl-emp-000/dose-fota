@@ -41,6 +41,8 @@ public class Constants {
     // The value of manifest.package in AndroidManifest.xml
     public static String PACKAGE_NAME;
 
+    public static String DEVICE_BOOT_NAME = "BLE DFU Device";
+
     /**
      * Actions that can be broadcasted by fotalibrary that the 3rd party app should receive
      */

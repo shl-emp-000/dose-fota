@@ -326,31 +326,35 @@ public class Utils {
      * @return {@link IntentFilter}
      */
     public static IntentFilter makeFotaApiIntentFilter(){
-        // BLE actions
-        final IntentFilter filter = makeGattUpdateIntentFilter();
-
-        // Internal actions
-        filter.addAction(ACTION_FOTA_DEVICE_BATTERY_READ);
-        filter.addAction(ACTION_FOTA_DEVICE_INFO_READ);
-        filter.addAction(ACTION_FOTA_FILE_DOWNLOADED);
-
-        // Actions that are also received by 3rd party app
-        filter.addAction(ACTION_FOTA_BLE_CONNECTION_FAILED);
-        filter.addAction(ACTION_FOTA_COULD_NOT_BE_STARTED);
+        final IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_FOTA_FAIL);
-        filter.addAction(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
-        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ);
-        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ);
-        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE);
-        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE);
-        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS);
-        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION);
-        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED);
-        filter.addAction(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
-        filter.addAction(ACTION_FOTA_POSSIBLE);
         filter.addAction(ACTION_FOTA_SUCCESS);
         filter.addAction(ACTION_FOTA_TIMEOUT);
+        return filter;
+    }
 
+    /**
+     * Adding the necessary Intent filters for Broadcast receiver in FotaApi
+     *
+     * @return {@link IntentFilter}
+     */
+    public static IntentFilter makeAppModeIntentFilter(){
+        final IntentFilter filter = makeGattUpdateIntentFilter();
+        filter.addAction(ACTION_FOTA_DEVICE_BATTERY_READ);
+        filter.addAction(ACTION_FOTA_DEVICE_INFO_READ);
+        return filter;
+    }
+
+    /**
+     * Adding the necessary Intent filters for Broadcast receiver in FotaApi
+     *
+     * @return {@link IntentFilter}
+     */
+    public static IntentFilter makeBootModeIntentFilter(){
+        final IntentFilter filter = makeGattUpdateIntentFilter();
+        filter.addAction(BluetoothDevice.ACTION_FOUND);
+        filter.addAction(ACTION_FOTA_FILE_DOWNLOADED);
+        filter.addAction(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
         return filter;
     }
 

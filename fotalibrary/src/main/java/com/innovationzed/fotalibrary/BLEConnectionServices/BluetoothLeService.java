@@ -489,6 +489,20 @@ public class BluetoothLeService extends Service {
         sendGlobalBroadcastIntent(mContext, otaDataAvailableIntent);
     }
 
+    public static boolean startDeviceScan(){
+        if (mBluetoothAdapter != null) {
+            return mBluetoothAdapter.startDiscovery();
+        }
+        return false;
+    }
+
+    public static boolean stopDeviceScan(){
+        if (mBluetoothAdapter != null) {
+            return mBluetoothAdapter.cancelDiscovery();
+        }
+        return false;
+    }
+
     /**
      * Connects to the GATT server hosted on the BlueTooth LE device.
      *
