@@ -427,11 +427,10 @@ public class FotaApi {
         int connectionState = BluetoothLeService.getConnectionState(device);
         if (device.getBondState() == BOND_BONDED && connectionState == STATE_CONNECTED){
             if (!BluetoothLeService.connect(FotaApi.macAddress, mContext)){
-                Utils.broadcastOTAFinished(mContext, ACTION_FOTA_BLE_CONNECTION_FAILED, "Initial connection to device failed");
+                broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
             }
         } else {
-            // Broadcast message saying that FOTA could not be started because the device isn't bonded and connected
-            Utils.broadcastOTAFinished(mContext, ACTION_FOTA_BLE_CONNECTION_FAILED, "Device is not bonded and connected");
+            broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);;
         }
     }
 
