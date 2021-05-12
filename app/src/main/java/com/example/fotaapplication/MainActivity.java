@@ -1,6 +1,7 @@
 package com.example.fotaapplication;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -10,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -42,7 +44,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static final int REQUEST_PERMISSION_EXTERNAL_STORAGE = 3;
 
     private FotaApi mFotaApi;
-    private boolean mUserWantsToUpdate;
+    private static boolean mUserWantsToUpdate = false;
+    private static boolean mFotaInProgress = false;
 
     // Receiver for the possible actions that can be broadcasted from the FotaApi
     private BroadcastReceiver mOTAStatusReceiver = new BroadcastReceiver() {
@@ -81,6 +84,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 } else if (action.equals(ACTION_FOTA_TIMEOUT)){
                     setTextInformation("Timeout.");
                 }
+                mFotaInProgress = false;
             }
         }
     };
@@ -105,7 +109,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // Emmy MAC 00:A0:50:B4:42:33
         // DOSE v5 MAC 00:A0:50:E2:65:48
         mFotaApi = new FotaApi(this, "00:A0:50:B4:42:33"); // MAC address is hardcoded at this point
-        mUserWantsToUpdate = false;
 
         // Attach onClickListeners
         ((Button)findViewById(R.id.buttonMacAddress)).setOnClickListener(this);
@@ -113,11 +116,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ((Button)findViewById(R.id.buttonUserConfirmation)).setOnClickListener(this);
         ((Button)findViewById(R.id.buttonFota)).setOnClickListener(this);
 
+        if (mFotaInProgress) {
+            setTextInformation("Firmware upgrade in progress...");
+        }
+
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        TextView textView = (TextView)findViewById(R.id.textViewMacAddress);
+        textView.requestFocus();
+        if (mFotaInProgress) {
+            setTextInformation("Firmware upgrade in progress...");
+        }
     }
 
     @Override
@@ -145,6 +157,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 } else {
                     setTextInformation("Device not changed.");
                 }
+                InputMethodManager imm = (InputMethodManager) this.getSystemService(Activity.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
                 break;
             case R.id.buttonPossible:
                 mFotaApi.isFirmwareUpdatePossible();
@@ -157,11 +171,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.buttonFota:
                 setTextInformation("Firmware upgrade in progress...");
+                mFotaInProgress = true;
                 mFotaApi.doFirmwareUpdate(mUserWantsToUpdate);
                 break;
             default:
                 break;
         }
+        TextView textView = (TextView)findViewById(R.id.textViewMacAddress);
+        textView.requestFocus();
     }
 
     private void setTextInformation(String s){
