@@ -78,6 +78,7 @@ public class FotaApi {
     private static boolean isInitialized = false;
     private static boolean mIsFotaInProgress = false;
     private static boolean mHasCheckedUpdatePossible = false;
+    private static boolean mShouldTryToBondInBootMode = false;
 
     private static Intent mOTAServiceIntent;
     private static Dictionary mDeviceInformation;
@@ -205,12 +206,14 @@ public class FotaApi {
 
                     if (device.getAddress().equals(FotaApi.macAddress) && device.getName().equals(DEVICE_BOOT_NAME)) {
                         BluetoothLeService.stopDeviceScan();
+                        mShouldTryToBondInBootMode = true;
                         BluetoothLeService.unpairDevice(device);
                     }
                 } else if (action.equals(ACTION_BOND_STATE_CHANGED)) {
                     BluetoothDevice device = BluetoothLeService.getRemoteDevice();
-                    if (device.getBondState() == BOND_NONE){
+                    if (device.getBondState() == BOND_NONE && mShouldTryToBondInBootMode){
                         // Device in boot mode has unpaired, pair again to be able to discover OTA service
+                        mShouldTryToBondInBootMode = false;
                         device.createBond();
                     } else if (device.getBondState() == BOND_BONDED) {
                         BluetoothLeService.connect(FotaApi.macAddress, mContext);
@@ -523,6 +526,7 @@ public class FotaApi {
         mShouldPostToBackend = false;
         mIsFotaInProgress = false;
         mHasCheckedUpdatePossible = false;
+        mShouldTryToBondInBootMode = false;
     }
 
     /**
