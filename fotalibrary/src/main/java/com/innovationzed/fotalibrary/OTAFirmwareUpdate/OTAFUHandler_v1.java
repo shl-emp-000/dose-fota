@@ -275,7 +275,8 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
                     mOtaFirmwareWrite.OTAExitBootloaderCmd(mCheckSumType);
                     Utils.setStringSharedPreference(getContext(), Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands_v1.EXIT_BOOTLOADER);
                 } else {
-                    if (FLOW_RETRY_LIMIT > mFlowRetryNum) {
+                    if (FLOW_RETRY_LIMIT < mFlowRetryNum) {
+                        mFlowRetryNum = FLOW_RETRY_LIMIT - 1; //Only retry once if this step fails
                         extras.putString(Constants.EXTRA_ERROR_OTA, "CYRET_ERR_UNK"); //Emulate error
                         processOTAStatus(BEGIN, extras); //Re-try complete flow
                         return;
