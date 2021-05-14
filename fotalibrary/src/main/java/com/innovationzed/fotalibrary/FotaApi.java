@@ -427,8 +427,7 @@ public class FotaApi {
 
         // Connect to device in order to read device information
         BluetoothDevice device = BluetoothLeService.getRemoteDevice(FotaApi.macAddress);
-        int connectionState = BluetoothLeService.getConnectionState(device);
-        if (device.getBondState() == BOND_BONDED && connectionState == STATE_CONNECTED){
+        if (device.getBondState() == BOND_BONDED){
             if (!BluetoothLeService.connect(FotaApi.macAddress, mContext)){
                 broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
             }
@@ -441,6 +440,13 @@ public class FotaApi {
      * Checks the remaining FOTA pre-reqs after reading info from the device.
      */
     private void checkRemainingPrerequisites(){
+        // Check wifi and network connection
+        boolean networkConnection = Utils.checkWifi(mContext) && Utils.checkNetwork(mContext);
+        if (!networkConnection) {
+            broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION);
+            return;
+        }
+
         // Get latest available firmware version and do the checks on response
         Callback callback = new Callback<List<Firmware>>() {
             @Override
@@ -457,13 +463,6 @@ public class FotaApi {
                 boolean updateExists = (Utils.compareVersion((String)mDeviceInformation.get("FirmwareRevision"), latestFirmwareVersion) < 0);
                 if (!updateExists){
                     broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS);
-                    return;
-                }
-
-                // Check wifi
-                boolean networkConnection = Utils.checkWifi(mContext) && Utils.checkNetwork(mContext);
-                if (!networkConnection) {
-                    broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION);
                     return;
                 }
 
