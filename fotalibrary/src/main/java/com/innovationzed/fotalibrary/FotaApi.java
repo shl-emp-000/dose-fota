@@ -288,6 +288,12 @@ public class FotaApi {
                         mBackend.postFotaResult(success, reason, mDeviceInformation);
                         mShouldPostToBackend = false;
                     }
+
+                    if (action.equals(ACTION_FOTA_FAIL)) {
+                        // Unpair in case it's in a state where it's still paired
+                        BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice(macAddress));
+                    }
+
                     mContext.stopService(mOTAServiceIntent);
                     mTimeoutHandler.removeCallbacks(mFotaProgressRunnable);
                     BluetoothLeService.unregisterBroadcastReceiver(mContext, mFOTAReceiver);
@@ -443,6 +449,22 @@ public class FotaApi {
             return;
         }
 
+        // Check wifi and network connection
+        boolean networkConnection = Utils.checkWifi(mContext) && Utils.checkNetwork(mContext);
+        if (!networkConnection) {
+            broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION);
+            return;
+        }
+
+        // Check phone battery
+        BatteryManager bm = (BatteryManager)mContext.getSystemService(mContext.BATTERY_SERVICE);
+        int percentage = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        boolean enoughBatteryPhone = percentage >= 50;
+        if (!enoughBatteryPhone) {
+            broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE);
+            return;
+        }
+
         // Connect to device in order to read device information
         BluetoothDevice device = BluetoothLeService.getRemoteDevice(FotaApi.macAddress);
         if (device.getBondState() == BOND_BONDED){
@@ -458,13 +480,6 @@ public class FotaApi {
      * Checks the remaining FOTA pre-reqs after reading info from the device.
      */
     private void checkRemainingPrerequisites(){
-        // Check wifi and network connection
-        boolean networkConnection = Utils.checkWifi(mContext) && Utils.checkNetwork(mContext);
-        if (!networkConnection) {
-            broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION);
-            return;
-        }
-
         // Get latest available firmware version and do the checks on response
         Callback callback = new Callback<List<Firmware>>() {
             @Override
@@ -481,15 +496,6 @@ public class FotaApi {
                 boolean updateExists = (Utils.compareVersion((String)mDeviceInformation.get("FirmwareRevision"), latestFirmwareVersion) < 0);
                 if (!updateExists){
                     broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS);
-                    return;
-                }
-
-                // Check phone battery
-                BatteryManager bm = (BatteryManager)mContext.getSystemService(mContext.BATTERY_SERVICE);
-                int percentage = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-                boolean enoughBatteryPhone = percentage >= 50;
-                if (!enoughBatteryPhone) {
-                    broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE);
                     return;
                 }
 

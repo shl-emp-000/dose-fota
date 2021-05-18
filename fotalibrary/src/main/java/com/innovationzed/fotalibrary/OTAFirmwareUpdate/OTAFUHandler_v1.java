@@ -127,11 +127,11 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
             try {
                 if (!checkTimeSinceLastOTAStatus()){
                     OTAFinished(ACTION_FOTA_FAIL, "Timeout/device disconnected");
+                } else {
+                    mOTATimeoutHandler.postDelayed(mStatusChecker, mInterval);
                 }
-            } finally {
-                // 100% guarantee that this always happens, even if
-                // your update method throws an exception
-                mOTATimeoutHandler.postDelayed(mStatusChecker, mInterval);
+            } catch (Exception e) {
+                OTAFinished(ACTION_FOTA_FAIL, "Fota failed during timeout check: " + e.getMessage());
             }
         }
     };
