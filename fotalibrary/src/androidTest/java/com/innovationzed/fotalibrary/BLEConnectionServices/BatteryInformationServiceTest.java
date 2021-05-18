@@ -2,7 +2,6 @@ package com.innovationzed.fotalibrary.BLEConnectionServices;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -11,6 +10,7 @@ import android.os.Bundle;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.innovationzed.fotalibrary.CommonUtils.Constants;
+import com.innovationzed.fotalibrary.CommonUtils.FotaBroadcastReceiver;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
 
 import org.junit.After;
@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 public class BatteryInformationServiceTest {
     public Context testContext;
     private int mBatteryLevel;
-    private BroadcastReceiver mReceiver;
+    private FotaBroadcastReceiver mReceiver;
     private BatteryInformationService mBatteryInformationService;
 
     @Before
@@ -46,7 +46,7 @@ public class BatteryInformationServiceTest {
     @Test
     public void readBatteryLevel() {
         // Register receiver to react when battery has been read
-        mReceiver = new BroadcastReceiver() {
+        mReceiver = new FotaBroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 assertTrue(intent.getAction().equals(ACTION_FOTA_DEVICE_BATTERY_READ));

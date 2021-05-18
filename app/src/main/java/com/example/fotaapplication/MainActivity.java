@@ -17,8 +17,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
 import com.innovationzed.fotalibrary.FotaApi;
 
@@ -102,8 +102,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         checkLocationPermission();
         checkStoragePermission();
 
-        // Register receiver
-        BluetoothLeService.registerBroadcastReceiver(this, mOTAStatusReceiver, Utils.make3rdPartyIntentFilter());
 
         // Anders MAC 00:A0:50:BA:CC:CE
         // Emmy MAC 00:A0:50:B4:42:33
@@ -124,23 +122,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     protected void onResume() {
-        super.onResume();
+        // Register receiver
+        LocalBroadcastManager.getInstance(this).registerReceiver(mOTAStatusReceiver, Utils.make3rdPartyIntentFilter());
         TextView textView = (TextView)findViewById(R.id.textViewMacAddress);
         textView.requestFocus();
         if (mFotaInProgress) {
             setTextInformation("Firmware upgrade in progress...");
         }
+        super.onResume();
     }
 
     @Override
     protected void onPause() {
+        // Unregister receiver
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mOTAStatusReceiver);
         super.onPause();
     }
 
     @Override
     public void onDestroy(){
-        // Unregister receiver
-        BluetoothLeService.unregisterBroadcastReceiver(this, mOTAStatusReceiver);
         super.onDestroy();
     }
 

@@ -1,6 +1,5 @@
 package com.innovationzed.fotalibrary;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Looper;
@@ -8,6 +7,7 @@ import android.os.Looper;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
+import com.innovationzed.fotalibrary.CommonUtils.FotaBroadcastReceiver;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
 
 import org.junit.After;
@@ -22,7 +22,7 @@ public class FotaApiTest {
     public Context testContext;
     private FotaApi mFotaApi;
     private String mMacAddress;
-    private BroadcastReceiver mReceiver;
+    private FotaBroadcastReceiver mReceiver;
 
     @Before
     public void setUp() throws Exception {
@@ -42,7 +42,7 @@ public class FotaApiTest {
     public void doFirmwareUpdateWithoutUserConfirmation() {
         Looper.prepare();
         mFotaApi = new FotaApi(testContext, mMacAddress);
-        mReceiver = new BroadcastReceiver() {
+        mReceiver = new FotaBroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 assertTrue(intent.getAction().equals(ACTION_FOTA_COULD_NOT_BE_STARTED));

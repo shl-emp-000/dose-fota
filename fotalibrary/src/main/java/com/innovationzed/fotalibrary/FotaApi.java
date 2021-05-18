@@ -4,7 +4,6 @@ import android.Manifest;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -18,6 +17,7 @@ import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
 import com.innovationzed.fotalibrary.BLEConnectionServices.DeviceInformationService;
 import com.innovationzed.fotalibrary.BackendCommunication.BackendApiRequest;
 import com.innovationzed.fotalibrary.BackendCommunication.Firmware;
+import com.innovationzed.fotalibrary.CommonUtils.FotaBroadcastReceiver;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
 import com.innovationzed.fotalibrary.OTAFirmwareUpdate.OTAFirmwareUpgrade;
@@ -101,6 +101,8 @@ public class FotaApi {
         public void run() {
             if (!mIsFotaInProgress) {
                 mShouldPostToBackend = true;
+                BluetoothLeService.unregisterBroadcastReceiver(mContext, mDiscoverImmediateAlertServiceReceiver);
+                BluetoothLeService.unregisterBroadcastReceiver(mContext, mBootModeReceiver);
                 try {
                     OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "FOTA timed out.");
                 } catch (Exception e) {
@@ -115,6 +117,15 @@ public class FotaApi {
         public void run() {
             if (!mHasCheckedUpdatePossible) {
                 mShouldPostToBackend = true;
+                if (null != mDeviceInformationService) {
+                    mDeviceInformationService.stop(mContext);
+                    mDeviceInformationService = null;
+                }
+                if (null != mBatteryInformationService) {
+                    mBatteryInformationService.stopReadingBatteryInfo(mContext);
+                    mBatteryInformationService = null;
+                }
+                BluetoothLeService.unregisterBroadcastReceiver(mContext, mAppModeReceiver);
                 try {
                     OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "Check for firmware update timed out.");
                 } catch (Exception e) {
@@ -127,53 +138,62 @@ public class FotaApi {
     /**
      * BroadcastReceiver that handles the BLE connection flow and the FOTA flow
      */
-    private BroadcastReceiver mAppModeReceiver = new BroadcastReceiver() {
+    private FotaBroadcastReceiver mAppModeReceiver = new FotaBroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             synchronized (this) {
                 final String action = intent.getAction();
                 if (action.equals(ACTION_GATT_CONNECTED)) {
                     BluetoothLeService.discoverServices();
-                } else if (action.equals(ACTION_GATT_DISCONNECTED)){
+                } else if (action.equals(ACTION_GATT_DISCONNECTED)) {
                     broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
                 } else if (action.equals(ACTION_GATT_SERVICES_DISCOVERED)) {
                     BluetoothGattService service = BluetoothLeService.getService(UUIDDatabase.UUID_DEVICE_INFORMATION_SERVICE);
-                    if (service != null) {
-                        mDeviceInformationService = DeviceInformationService.create(service);
-                        mDeviceInformationService.startReadingDeviceInfo(mContext);
+                    if (null != service) {
+                        if (null == mDeviceInformationService) {
+                            mDeviceInformationService = DeviceInformationService.create(service);
+                            mDeviceInformationService.startReadingDeviceInfo(mContext);
+                        }
                     } else {
                         broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ);
                     }
                 } else if (action.equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL)) {
                     broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
                 } else if (action.equals(ACTION_FOTA_DEVICE_INFO_READ)) {
-                    mDeviceInformationService.stop(mContext);
+                    if (null != mDeviceInformationService) {
+                        mDeviceInformationService.stop(mContext);
+                        mDeviceInformationService = null;
+                    }
                     mDeviceInformation = DeviceInformationService.getDeviceInformation();
 
                     // Read battery level
                     BluetoothGattService service = BluetoothLeService.getService(UUIDDatabase.UUID_BATTERY_SERVICE);
-                    if (service != null) {
-                        mBatteryInformationService = BatteryInformationService.create(service);
-                        mBatteryInformationService.startReadingBatteryInfo(mContext);
+                    if (null != service) {
+                        if (null == mBatteryInformationService) {
+                            mBatteryInformationService = BatteryInformationService.create(service);
+                            mBatteryInformationService.startReadingBatteryInfo(mContext);
+                        }
                     } else {
                         broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ);
                     }
                 } else if (action.equals(ACTION_FOTA_DEVICE_BATTERY_READ)) {
-                    mBatteryInformationService.stopReadingBatteryInfo(mContext);
+                    if (null != mBatteryInformationService) {
+                        mBatteryInformationService.stopReadingBatteryInfo(mContext);
+                        mBatteryInformationService = null;
+                    }
+
                     int battery = BatteryInformationService.getBatteryLevel();
                     mDeviceInformation.put("BatteryLevel", battery);
                     checkRemainingPrerequisites();
                 }
             }
         }
-
-
     };
 
     /**
      * BroadcastReceiver that handles the BLE connection flow and the FOTA flow
      */
-    private BroadcastReceiver mDiscoverImmediateAlertServiceReceiver = new BroadcastReceiver() {
+    private FotaBroadcastReceiver mDiscoverImmediateAlertServiceReceiver = new FotaBroadcastReceiver() {
 
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -194,7 +214,7 @@ public class FotaApi {
     /**
      * BroadcastReceiver for handling when the device is found in boot mode
      */
-    private BroadcastReceiver mBootModeReceiver = new BroadcastReceiver() {
+    private FotaBroadcastReceiver mBootModeReceiver = new FotaBroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             synchronized (this) {
@@ -247,7 +267,7 @@ public class FotaApi {
     /**
      * BroadcastReceiver for handling FOTA actions
      */
-    private BroadcastReceiver mFOTAReceiver = new BroadcastReceiver() {
+    private FotaBroadcastReceiver mFOTAReceiver = new FotaBroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             synchronized (this) {
@@ -293,7 +313,6 @@ public class FotaApi {
 
             // Register receiver
             BluetoothLeService.registerBroadcastReceiver(mContext, mFOTAReceiver, Utils.makeFotaApiIntentFilter());
-
             // Start BLE service
             mContext.startService(new Intent(mContext, BluetoothLeService.class));
 
@@ -323,7 +342,6 @@ public class FotaApi {
     public void isFirmwareUpdatePossible(){
         // Register receiver
         BluetoothLeService.registerBroadcastReceiver(mContext, mAppModeReceiver, Utils.makeAppModeIntentFilter());
-
         checkFirmwareUpdatePossible();
     }
 

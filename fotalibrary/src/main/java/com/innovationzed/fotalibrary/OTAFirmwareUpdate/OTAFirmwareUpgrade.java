@@ -36,7 +36,6 @@ package com.innovationzed.fotalibrary.OTAFirmwareUpdate;
 import android.app.Service;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
@@ -47,6 +46,7 @@ import androidx.annotation.Nullable;
 
 import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
 import com.innovationzed.fotalibrary.CommonUtils.Constants;
+import com.innovationzed.fotalibrary.CommonUtils.FotaBroadcastReceiver;
 import com.innovationzed.fotalibrary.CommonUtils.GattAttributes;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
@@ -95,7 +95,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
 
     private OTAResponseReceiver_v1 mOTAResponseReceiverV1;
 
-    private BroadcastReceiver mGattOTAStatusReceiver = new BroadcastReceiver() {
+    private FotaBroadcastReceiver mGattOTAStatusReceiver = new FotaBroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             synchronized (this) {

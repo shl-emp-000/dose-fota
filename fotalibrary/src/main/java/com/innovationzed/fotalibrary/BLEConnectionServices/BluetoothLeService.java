@@ -43,7 +43,6 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -56,6 +55,7 @@ import android.os.Looper;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.innovationzed.fotalibrary.CommonUtils.Constants;
+import com.innovationzed.fotalibrary.CommonUtils.FotaBroadcastReceiver;
 import com.innovationzed.fotalibrary.CommonUtils.GattAttributes;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
@@ -329,20 +329,26 @@ public class BluetoothLeService extends Service {
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
     }
 
-    public static void registerBroadcastReceiver(Context context, BroadcastReceiver receiver, IntentFilter filter) {
-        // Registering receiver as a LOCAL receiver
-        LocalBroadcastManager.getInstance(context).registerReceiver(receiver, filter);
+    public static void registerBroadcastReceiver(Context context, FotaBroadcastReceiver receiver, IntentFilter filter) {
+        if (!receiver.isRegistered) {
+            // Registering receiver as a LOCAL receiver
+            LocalBroadcastManager.getInstance(context).registerReceiver(receiver, filter);
 
-        // Registering receiver as a GLOBAL receiver
-        context.registerReceiver(receiver, filter);
+            // Registering receiver as a GLOBAL receiver
+            context.registerReceiver(receiver, filter);
+            receiver.isRegistered = true;
+        }
     }
 
-    public static void unregisterBroadcastReceiver(Context context, BroadcastReceiver receiver) {
-        // Unregistering receiver as a LOCAL receiver
-        LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver);
+    public static void unregisterBroadcastReceiver(Context context, FotaBroadcastReceiver receiver) {
+        if (receiver.isRegistered) {
+            // Unregistering receiver as a LOCAL receiver
+            LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver);
 
-        // Unregistering receiver as a GLOBAL receiver
-        context.unregisterReceiver(receiver);
+            // Unregistering receiver as a GLOBAL receiver
+            context.unregisterReceiver(receiver);
+            receiver.isRegistered = false;
+        }
     }
 
     public static void exchangeGattMtu(int mtu) {

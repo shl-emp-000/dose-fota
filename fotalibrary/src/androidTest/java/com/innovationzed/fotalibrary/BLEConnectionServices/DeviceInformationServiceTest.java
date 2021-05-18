@@ -2,7 +2,6 @@ package com.innovationzed.fotalibrary.BLEConnectionServices;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -11,6 +10,7 @@ import android.os.Bundle;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.innovationzed.fotalibrary.CommonUtils.Constants;
+import com.innovationzed.fotalibrary.CommonUtils.FotaBroadcastReceiver;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
 
 import org.junit.After;
@@ -30,7 +30,7 @@ public class DeviceInformationServiceTest {
 
     public Context testContext;
     private Dictionary mDeviceInfo;
-    private BroadcastReceiver mReceiver;
+    private FotaBroadcastReceiver mReceiver;
     private DeviceInformationService mDeviceInformationService;
     private String mFirmwareRevision;
     private String mManufacturerName;
@@ -50,7 +50,7 @@ public class DeviceInformationServiceTest {
     @Test
     public void readDeviceInfo() {
         // Register receiver to react when device info has been read
-        mReceiver = new BroadcastReceiver() {
+        mReceiver = new FotaBroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 assertTrue(intent.getAction().equals(ACTION_FOTA_DEVICE_INFO_READ));

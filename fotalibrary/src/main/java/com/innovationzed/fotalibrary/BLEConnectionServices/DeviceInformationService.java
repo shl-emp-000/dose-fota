@@ -35,12 +35,12 @@ package com.innovationzed.fotalibrary.BLEConnectionServices;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
 import com.innovationzed.fotalibrary.CommonUtils.Constants;
+import com.innovationzed.fotalibrary.CommonUtils.FotaBroadcastReceiver;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
 
@@ -76,7 +76,7 @@ public class DeviceInformationService {
     /**
      * BroadcastReceiver for receiving updates from the GATT server
      */
-    private BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
+    private FotaBroadcastReceiver mGattUpdateReceiver = new FotaBroadcastReceiver() {
 
         @Override
         public void onReceive(Context context, Intent intent) {

@@ -2,7 +2,6 @@ package com.innovationzed.fotalibrary.CommonUtils;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -33,7 +32,7 @@ public class UtilsTest {
     public Context testContext;
     private String mReason;
     private String mTestAction;
-    private BroadcastReceiver mReceiver;
+    private FotaBroadcastReceiver mReceiver;
 
     @Before
     public void setUp() throws Exception {
@@ -63,7 +62,7 @@ public class UtilsTest {
      */
     @Test
     public void broadcastOTAFinished() {
-        mReceiver = new BroadcastReceiver() {
+        mReceiver = new FotaBroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 String action = intent.getAction();

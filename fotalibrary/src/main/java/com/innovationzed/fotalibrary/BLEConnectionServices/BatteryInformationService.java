@@ -35,12 +35,12 @@ package com.innovationzed.fotalibrary.BLEConnectionServices;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
 import com.innovationzed.fotalibrary.CommonUtils.Constants;
+import com.innovationzed.fotalibrary.CommonUtils.FotaBroadcastReceiver;
 import com.innovationzed.fotalibrary.CommonUtils.GattAttributes;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
 
@@ -57,7 +57,7 @@ public class BatteryInformationService {
     private static int mBatteryLevel = -1;
     private static boolean mHasRead = false;
 
-    private BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
+    private FotaBroadcastReceiver mGattUpdateReceiver = new FotaBroadcastReceiver() {
 
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -66,7 +66,7 @@ public class BatteryInformationService {
             // GATT Data available
             if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 // Check for battery information
-                if (extras.containsKey(Constants.EXTRA_BTL_VALUE)) {
+                if (extras.containsKey(Constants.EXTRA_BTL_VALUE) && !mHasRead) {
                     String received_btl_data = intent.getStringExtra(Constants.EXTRA_BTL_VALUE);
                     mBatteryLevel = Integer.parseInt(received_btl_data);
                     mHasRead = true;
