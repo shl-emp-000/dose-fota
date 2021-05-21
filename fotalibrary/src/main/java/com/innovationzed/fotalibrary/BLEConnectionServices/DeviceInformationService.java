@@ -86,32 +86,50 @@ public class DeviceInformationService {
             // GATT Data available
             if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 if (extras.containsKey(Constants.EXTRA_MANUFACTURER_NAME)) {
-                    mManufacturerName = intent.getStringExtra(Constants.EXTRA_MANUFACTURER_NAME);
+                    String readValue = intent.getStringExtra(Constants.EXTRA_MANUFACTURER_NAME);
+                    if (readValue.charAt(0) != '\0') {
+                        mManufacturerName = readValue;
+                    }
                     ++numbOfCharacteristicsRead;
                     readNextCharacteristic();
                 }
                 if (extras.containsKey(Constants.EXTRA_MODEL_NUMBER)) {
-                    mModelNumber = intent.getStringExtra(Constants.EXTRA_MODEL_NUMBER);
+                    String readValue = intent.getStringExtra(Constants.EXTRA_MODEL_NUMBER);
+                    if (readValue.charAt(0) != '\0') {
+                        mModelNumber = readValue;
+                    }
                     ++numbOfCharacteristicsRead;
                     readNextCharacteristic();
                 }
                 if (extras.containsKey(Constants.EXTRA_SERIAL_NUMBER)) {
-                    mSerialNumber = intent.getStringExtra(Constants.EXTRA_SERIAL_NUMBER);
+                    String readValue = intent.getStringExtra(Constants.EXTRA_SERIAL_NUMBER);
+                    if (readValue.charAt(0) != '\0') {
+                        mSerialNumber = readValue;
+                    }
                     ++numbOfCharacteristicsRead;
                     readNextCharacteristic();
                 }
                 if (extras.containsKey(Constants.EXTRA_HARDWARE_REVISION)) {
-                    mHardwareRevision = intent.getStringExtra(Constants.EXTRA_HARDWARE_REVISION);
+                    String readValue = intent.getStringExtra(Constants.EXTRA_HARDWARE_REVISION);
+                    if (readValue.charAt(0) != '\0') {
+                        mHardwareRevision = readValue;
+                    }
                     ++numbOfCharacteristicsRead;
                     readNextCharacteristic();
                 }
                 if (extras.containsKey(Constants.EXTRA_FIRMWARE_REVISION)) {
-                    mFirmwareRevision = intent.getStringExtra(Constants.EXTRA_FIRMWARE_REVISION);
+                    String readValue = intent.getStringExtra(Constants.EXTRA_FIRMWARE_REVISION);
+                    if (readValue.charAt(0) != '\0') {
+                        mFirmwareRevision = readValue;
+                    }
                     ++numbOfCharacteristicsRead;
                     readNextCharacteristic();
                 }
                 if (extras.containsKey(Constants.EXTRA_SOFTWARE_REVISION)) {
-                    mSoftwareRevision = intent.getStringExtra(Constants.EXTRA_SOFTWARE_REVISION);
+                    String readValue = intent.getStringExtra(Constants.EXTRA_SOFTWARE_REVISION);
+                    if (readValue.charAt(0) != '\0') {
+                        mSoftwareRevision = readValue;
+                    }
                     ++numbOfCharacteristicsRead;
                     readNextCharacteristic();
                 }

@@ -177,6 +177,24 @@ public class UtilsTest {
      * Tests that makeBootModeIntentFilter adds all the correct filters
      */
     @Test
+    public void makeImmediateAlertIntentFilter() {
+        int nbrActions = 0;
+        ArrayList<String> actionList = getImmediateAlertActions();
+
+        IntentFilter filter = Utils.makeImmediateAlertIntentFilter();
+        Iterator<String> it = filter.actionsIterator();
+        while (it.hasNext()) {
+            String s = it.next();
+            assertTrue(actionList.contains(s));
+            ++nbrActions;
+        }
+        assertTrue(nbrActions == actionList.size());
+    }
+
+    /**
+     * Tests that makeBootModeIntentFilter adds all the correct filters
+     */
+    @Test
     public void makeBootModeIntentFilter() {
         int nbrActions = 0;
         ArrayList<String> actionList = getBootModeActions();
@@ -269,6 +287,31 @@ public class UtilsTest {
         actionList.add(LocationManager.PROVIDERS_CHANGED_ACTION);
 
         actionList.add(BluetoothDevice.ACTION_FOUND);
+        return actionList;
+    }
+
+    private ArrayList<String> getImmediateAlertActions(){
+        ArrayList<String> actionList = new ArrayList<>();
+        actionList.add(BluetoothAdapter.ACTION_STATE_CHANGED);
+        actionList.add(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+        actionList.add(BluetoothDevice.ACTION_PAIRING_REQUEST);
+        actionList.add(BluetoothLeService.ACTION_PAIRING_CANCEL);
+        actionList.add(BluetoothLeService.ACTION_OTA_STATUS);//CYACD
+        actionList.add(BluetoothLeService.ACTION_OTA_STATUS_V1);//CYACD2
+        actionList.add(BluetoothLeService.ACTION_GATT_CONNECTED);
+        actionList.add(BluetoothLeService.ACTION_GATT_CONNECTING);
+        actionList.add(BluetoothLeService.ACTION_GATT_DISCONNECTED);
+        actionList.add(BluetoothLeService.ACTION_GATT_DISCONNECTING);
+        actionList.add(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
+        actionList.add(BluetoothLeService.ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL);
+        actionList.add(BluetoothLeService.ACTION_GATT_CHARACTERISTIC_ERROR);
+        actionList.add(BluetoothLeService.ACTION_GATT_INSUFFICIENT_ENCRYPTION);
+        actionList.add(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        actionList.add(BluetoothLeService.ACTION_WRITE_SUCCESS);
+        actionList.add(BluetoothLeService.ACTION_WRITE_FAILED);
+        actionList.add(BluetoothLeService.ACTION_WRITE_COMPLETED);
+        actionList.add(LocationManager.PROVIDERS_CHANGED_ACTION);
+
         actionList.add(ACTION_FOTA_FILE_DOWNLOADED);
         actionList.add(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
         return actionList;

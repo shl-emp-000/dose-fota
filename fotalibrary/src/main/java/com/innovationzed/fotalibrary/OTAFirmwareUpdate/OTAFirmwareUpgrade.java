@@ -130,7 +130,7 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         if(mOtaService != null){
             OTAFirmwareUpgrade.mOtaCharacteristic = getGattData();
             if (OTAFirmwareUpgrade.mOtaCharacteristic == null){
-                OTAFinished(this, ACTION_FOTA_FAIL, "getGattData() failed (OTAFirmwareUpgrade.mOtaCharacteristic is null)");
+                Utils.broadcastOTAFinished(this, ACTION_FOTA_FAIL, "getGattData() failed (OTAFirmwareUpgrade.mOtaCharacteristic is null)", true);
             }
 
             boolean isCyacd2File = downloadedFirmwareDir != null && isCyacd2File(downloadedFirmwareDir);
@@ -140,10 +140,10 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
             try {
                 mOTAFUHandler.prepareFileWrite();
             } catch (Exception e) {
-                OTAFinished(this, ACTION_FOTA_FAIL, "Invalid firmware file.");
+                Utils.broadcastOTAFinished(this, ACTION_FOTA_FAIL, "Invalid firmware file.", true);
             }
         } else {
-            OTAFinished(this, ACTION_FOTA_FAIL, "Could not find OTA service.");
+            Utils.broadcastOTAFinished(this, ACTION_FOTA_FAIL, "Could not find OTA service.", true);
         }
 
     }
@@ -262,11 +262,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
 
     private boolean isCyacd2File(String file) {
         return file.matches(REGEX_MATCHES_CYACD2);
-    }
-
-    public static void OTAFinished(Context context, String action, String reason){
-        Utils.deleteFirmwareFile();
-        Utils.broadcastOTAFinished(context, action, reason);
     }
 
 }

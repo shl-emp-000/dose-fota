@@ -90,6 +90,7 @@ import static com.innovationzed.fotalibrary.FotaApi.downloadedFirmwareDir;
 public class Utils {
 
     public static final String OTA_REASON = "OTA_REASON";
+    public static final String IS_IN_BOOT_MODE = "IS_IN_BOOT_MODE";
 
     // Shared preference constant
     private static final String SHARED_PREF_NAME = "FOTA Shared Preference";
@@ -120,9 +121,21 @@ public class Utils {
      * @param reason for finishing this way (error message etc)
      */
     public static void broadcastOTAFinished(Context context, String action, String reason){
+        deleteFirmwareFile();
+       broadcastOTAFinished(context, action, reason, false);
+    }
+
+    /**
+     * Broadcasts an action specifying how OTA was finished and the reason
+     * @param context
+     * @param action describing how OTA was finished (ex: ACTION_FOTA_FAIL)
+     * @param reason for finishing this way (error message etc)
+     */
+    public static void broadcastOTAFinished(Context context, String action, String reason, boolean bootMode){
         Intent otaFinishedIntent = new Intent(action);
         Bundle bundle = new Bundle();
         bundle.putString(OTA_REASON, reason);
+        bundle.putBoolean(IS_IN_BOOT_MODE, bootMode);
         otaFinishedIntent.putExtras(bundle);
         BluetoothLeService.sendLocalBroadcastIntent(context, otaFinishedIntent);
     }
@@ -353,6 +366,16 @@ public class Utils {
     public static IntentFilter makeBootModeIntentFilter(){
         final IntentFilter filter = makeGattUpdateIntentFilter();
         filter.addAction(BluetoothDevice.ACTION_FOUND);
+        return filter;
+    }
+
+    /**
+     * Adding the necessary Intent filters for Broadcast receiver in FotaApi
+     *
+     * @return {@link IntentFilter}
+     */
+    public static IntentFilter makeImmediateAlertIntentFilter(){
+        final IntentFilter filter = makeGattUpdateIntentFilter();
         filter.addAction(ACTION_FOTA_FILE_DOWNLOADED);
         filter.addAction(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
         return filter;

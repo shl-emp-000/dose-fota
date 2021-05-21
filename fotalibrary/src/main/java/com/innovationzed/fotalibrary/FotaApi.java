@@ -63,6 +63,7 @@ import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_SU
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_TIMEOUT;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.DEVICE_BOOT_NAME;
 import static com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase.UUID_IMMEDIATE_ALERT_SERVICE;
+import static com.innovationzed.fotalibrary.CommonUtils.Utils.IS_IN_BOOT_MODE;
 import static com.innovationzed.fotalibrary.CommonUtils.Utils.OTA_REASON;
 
 public class FotaApi {
@@ -104,9 +105,9 @@ public class FotaApi {
                 BluetoothLeService.unregisterBroadcastReceiver(mContext, mDiscoverImmediateAlertServiceReceiver);
                 BluetoothLeService.unregisterBroadcastReceiver(mContext, mBootModeReceiver);
                 try {
-                    OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "FOTA timed out.");
+                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_TIMEOUT, "FOTA timed out.", true);
                 } catch (Exception e) {
-                    OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "Error during check for FOTA timeout.");
+                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_TIMEOUT, "Error during check for FOTA timeout.", true);
                 }
             }
         }
@@ -127,9 +128,9 @@ public class FotaApi {
                 }
                 BluetoothLeService.unregisterBroadcastReceiver(mContext, mAppModeReceiver);
                 try {
-                    OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "Check for firmware update timed out.");
+                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_TIMEOUT, "Check for firmware update timed out.");
                 } catch (Exception e) {
-                    OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_TIMEOUT, "Error during check for firmware update timeout.");
+                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_TIMEOUT, "Error during check for firmware update timeout.");
                 }
             }
         }
@@ -205,7 +206,27 @@ public class FotaApi {
         public void onReceive(Context context, Intent intent) {
             synchronized (this) {
                 final String action = intent.getAction();
-                if (action.equals(ACTION_GATT_SERVICES_DISCOVERED)) {
+                if (action.equals(ACTION_FOTA_FILE_DOWNLOADED)) {
+                    // Timeout check
+                    mTimeoutHandler.postDelayed(mFotaProgressRunnable, FOTA_PROGRESS_TIME_LIMIT);
+
+                    // Check if device is connected and paired
+                    BluetoothDevice device = BluetoothLeService.getRemoteDevice(FotaApi.macAddress);
+                    int connectionState = BluetoothLeService.getConnectionState(device);
+                    if (device.getBondState() == BOND_BONDED && connectionState == STATE_CONNECTED){
+                        if (!BluetoothLeService.discoverServices()){
+                            Utils.broadcastOTAFinished(mContext, ACTION_FOTA_COULD_NOT_BE_STARTED, "Could not start service discovery");
+                        }
+                    } else {
+                        // Broadcast message saying that FOTA could not be started because the device isn't bonded and connected
+                        Utils.broadcastOTAFinished(mContext, ACTION_FOTA_COULD_NOT_BE_STARTED, "Device is not bonded and connected");
+                    }
+                } else if (action.equals(ACTION_FOTA_FILE_DOWNLOAD_FAILED)) {
+                    BluetoothLeService.unregisterBroadcastReceiver(mContext, mDiscoverImmediateAlertServiceReceiver);
+                    mTimeoutHandler.removeCallbacks(mFotaProgressRunnable);
+                    resetAllVariables();
+                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_FAIL, "File download failed.");
+                } else if (action.equals(ACTION_GATT_SERVICES_DISCOVERED)) {
                     BluetoothLeService.unregisterBroadcastReceiver(mContext, mDiscoverImmediateAlertServiceReceiver);
                     jumpToBoot();
                 } else if (action.equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL)) {
@@ -246,25 +267,19 @@ public class FotaApi {
                     }
                 } else if (action.equals(ACTION_GATT_CONNECTED)) {
                     if (!BluetoothLeService.discoverServices()){
-                        OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "Service discovery could not be started.");
+                        Utils.broadcastOTAFinished(mContext, ACTION_FOTA_FAIL, "Service discovery could not be started.", true);
                     }
                 } else if (action.equals(ACTION_GATT_SERVICES_DISCOVERED)) {
-                    if (BluetoothLeService.getService(UUIDDatabase.UUID_OTA_UPDATE_SERVICE) != null){
-                        downloadFirmwareFile();
+                    if (BluetoothLeService.getService(UUIDDatabase.UUID_OTA_UPDATE_SERVICE) != null && !mIsFotaInProgress){
+                        mIsFotaInProgress = true;
+                        BluetoothLeService.unregisterBroadcastReceiver(mContext, mBootModeReceiver);
+                        mTimeoutHandler.removeCallbacks(mFotaProgressRunnable);
+                        mContext.startService(mOTAServiceIntent);
                     } else {
-                        OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "Could not discover OTA service.");
+                        Utils.broadcastOTAFinished(mContext, ACTION_FOTA_FAIL, "Could not discover OTA service.", true);
                     }
                 } else if (action.equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL)) {
-                    OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "Could not discover services");
-                } else if (action.equals(ACTION_FOTA_FILE_DOWNLOADED) && !mIsFotaInProgress) {
-                    mIsFotaInProgress = true;
-                    BluetoothLeService.unregisterBroadcastReceiver(mContext, mBootModeReceiver);
-                    mTimeoutHandler.removeCallbacks(mFotaProgressRunnable);
-                    mContext.startService(mOTAServiceIntent);
-                } else if (action.equals(ACTION_FOTA_FILE_DOWNLOAD_FAILED)) {
-                    BluetoothLeService.unregisterBroadcastReceiver(mContext, mBootModeReceiver);
-                    mTimeoutHandler.removeCallbacks(mFotaProgressRunnable);
-                    resetAllVariables();
+                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_FAIL, "Could not discover services", true);
                 }
             }
         }
@@ -281,10 +296,15 @@ public class FotaApi {
                 if (action.equals(ACTION_FOTA_SUCCESS) || action.equals(ACTION_FOTA_FAIL) || action.equals(ACTION_FOTA_TIMEOUT)) {
                     boolean success = action.equals(ACTION_FOTA_SUCCESS);
                     String reason = action.equals(ACTION_FOTA_SUCCESS) ? "N/A" : "Default fail message";
+                    boolean isInBootMode = false;
 
                     Bundle bundle = intent.getExtras();
                     if (bundle.containsKey(OTA_REASON)) {
                         reason = bundle.getString(OTA_REASON);
+                    }
+
+                    if (bundle.containsKey(IS_IN_BOOT_MODE)) {
+                        isInBootMode = bundle.getBoolean(IS_IN_BOOT_MODE);
                     }
 
                     if (mShouldPostToBackend) {
@@ -295,7 +315,7 @@ public class FotaApi {
                         mShouldPostToBackend = false;
                     }
 
-                    if (action.equals(ACTION_FOTA_FAIL)) {
+                    if (isInBootMode) {
                         // Unpair in case it's in a state where it's still paired
                         BluetoothLeService.unpairDevice(BluetoothLeService.getRemoteDevice(macAddress));
                     }
@@ -364,23 +384,10 @@ public class FotaApi {
      */
     public void doFirmwareUpdate(boolean userConfirmation){
         if (userConfirmation && mUpdatePossible){
-            BluetoothLeService.registerBroadcastReceiver(mContext, mDiscoverImmediateAlertServiceReceiver, Utils.makeGattUpdateIntentFilter());
+            BluetoothLeService.registerBroadcastReceiver(mContext, mDiscoverImmediateAlertServiceReceiver, Utils.makeImmediateAlertIntentFilter());
             mShouldPostToBackend = true;
 
-            // Timeout check
-            mTimeoutHandler.postDelayed(mFotaProgressRunnable, FOTA_PROGRESS_TIME_LIMIT);
-
-            // Check if device is connected and paired
-            BluetoothDevice device = BluetoothLeService.getRemoteDevice(FotaApi.macAddress);
-            int connectionState = BluetoothLeService.getConnectionState(device);
-            if (device.getBondState() == BOND_BONDED && connectionState == STATE_CONNECTED){
-                if (!BluetoothLeService.discoverServices()){
-                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_COULD_NOT_BE_STARTED, "Could not start service discovery");
-                }
-            } else {
-                // Broadcast message saying that FOTA could not be started because the device isn't bonded and connected
-                Utils.broadcastOTAFinished(mContext, ACTION_FOTA_COULD_NOT_BE_STARTED, "Device is not bonded and connected");
-            }
+            downloadFirmwareFile();
         }
         else {
             Utils.deleteFirmwareFile();
@@ -581,11 +588,11 @@ public class FotaApi {
                 BluetoothLeService.registerBroadcastReceiver(mContext, mBootModeReceiver, Utils.makeBootModeIntentFilter());
                 BluetoothLeService.startDeviceScan();
             } else {
-                OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "FOTA failed during jump to boot. Alert level characteristic not found.");
+                Utils.broadcastOTAFinished(mContext, ACTION_FOTA_FAIL, "FOTA failed during jump to boot. Alert level characteristic not found.");
             }
 
         } else {
-            OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "FOTA failed during jump to boot. Immediate alert service not found.");
+            Utils.broadcastOTAFinished(mContext, ACTION_FOTA_FAIL, "FOTA failed during jump to boot. Immediate alert service not found.");
         }
     }
 
