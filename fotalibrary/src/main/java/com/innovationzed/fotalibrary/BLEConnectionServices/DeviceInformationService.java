@@ -62,8 +62,8 @@ public class DeviceInformationService {
     private Queue<BluetoothGattCharacteristic> mReadCharacteristics = new LinkedList<>();
     private Context mContext;
 
-    private static int nbrCharacteristicsRead = 0;
-    private final static int NBR_CHARACTERISTICS = 2; // TODO: should be 6 for real device, but example app only has 2
+    private static int numbOfCharacteristicsRead = 0;
+    private static int numbOfCharacteristics = 0;
 
     // Data variables
     private static String mManufacturerName = "not found";
@@ -87,39 +87,39 @@ public class DeviceInformationService {
             if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 if (extras.containsKey(Constants.EXTRA_MANUFACTURER_NAME)) {
                     mManufacturerName = intent.getStringExtra(Constants.EXTRA_MANUFACTURER_NAME);
-                    ++nbrCharacteristicsRead;
+                    ++numbOfCharacteristicsRead;
                     readNextCharacteristic();
                 }
                 if (extras.containsKey(Constants.EXTRA_MODEL_NUMBER)) {
                     mModelNumber = intent.getStringExtra(Constants.EXTRA_MODEL_NUMBER);
-                    ++nbrCharacteristicsRead;
+                    ++numbOfCharacteristicsRead;
                     readNextCharacteristic();
                 }
                 if (extras.containsKey(Constants.EXTRA_SERIAL_NUMBER)) {
                     mSerialNumber = intent.getStringExtra(Constants.EXTRA_SERIAL_NUMBER);
-                    ++nbrCharacteristicsRead;
+                    ++numbOfCharacteristicsRead;
                     readNextCharacteristic();
                 }
                 if (extras.containsKey(Constants.EXTRA_HARDWARE_REVISION)) {
                     mHardwareRevision = intent.getStringExtra(Constants.EXTRA_HARDWARE_REVISION);
-                    ++nbrCharacteristicsRead;
+                    ++numbOfCharacteristicsRead;
                     readNextCharacteristic();
                 }
                 if (extras.containsKey(Constants.EXTRA_FIRMWARE_REVISION)) {
                     mFirmwareRevision = intent.getStringExtra(Constants.EXTRA_FIRMWARE_REVISION);
-                    ++nbrCharacteristicsRead;
+                    ++numbOfCharacteristicsRead;
                     readNextCharacteristic();
                 }
                 if (extras.containsKey(Constants.EXTRA_SOFTWARE_REVISION)) {
                     mSoftwareRevision = intent.getStringExtra(Constants.EXTRA_SOFTWARE_REVISION);
-                    ++nbrCharacteristicsRead;
+                    ++numbOfCharacteristicsRead;
                     readNextCharacteristic();
                 }
 
                 // all characteristics read
-                if (nbrCharacteristicsRead == NBR_CHARACTERISTICS){
+                if (numbOfCharacteristicsRead == numbOfCharacteristics){
                     BluetoothLeService.sendLocalBroadcastIntent(mContext, new Intent(ACTION_FOTA_DEVICE_INFO_READ));
-                    nbrCharacteristicsRead = 0;
+                    numbOfCharacteristicsRead = 0;
                 }
             }
         }
@@ -181,6 +181,7 @@ public class DeviceInformationService {
                 }
             }
         }
+        numbOfCharacteristics = mReadCharacteristics.size();
     }
 
     private void readCharacteristic(BluetoothGattCharacteristic characteristic) {
