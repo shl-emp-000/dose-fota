@@ -904,16 +904,6 @@ public class BluetoothLeService extends Service {
         return mBluetoothManager.getConnectionState(device, BluetoothProfile.GATT);
     }
 
-    public static boolean pairDevice(BluetoothDevice device) {
-        try {
-            // TODO: use BluetoothDevice.createBond() public method
-            Boolean rv = (Boolean) invokeBluetoothDeviceMethod(device, "createBond");
-            return rv;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
     public static boolean unpairDevice(BluetoothDevice device) {
         try {
             Boolean rv = (Boolean) invokeBluetoothDeviceMethod(device, "removeBond");

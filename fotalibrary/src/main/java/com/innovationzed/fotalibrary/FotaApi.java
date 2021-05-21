@@ -166,6 +166,12 @@ public class FotaApi {
                     }
                     mDeviceInformation = DeviceInformationService.getDeviceInformation();
 
+                    // TODO: Remove this hardcoded device hw rev when app returns real value
+                    if (mDeviceInformation.get("HardwareRevision") == "not found")
+                    {
+                        mDeviceInformation.put("HardwareRevision", "V5");
+                    }
+
                     // Read battery level
                     BluetoothGattService service = BluetoothLeService.getService(UUIDDatabase.UUID_BATTERY_SERVICE);
                     if (null != service) {
@@ -203,7 +209,7 @@ public class FotaApi {
                     BluetoothLeService.unregisterBroadcastReceiver(mContext, mDiscoverImmediateAlertServiceReceiver);
                     jumpToBoot();
                 } else if (action.equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL)) {
-                    // TODO: retry x times
+                    BluetoothLeService.unregisterBroadcastReceiver(mContext, mDiscoverImmediateAlertServiceReceiver);
                     broadcastFirmwareCheck(ACTION_FOTA_COULD_NOT_BE_STARTED);
                 }
             }
@@ -249,7 +255,7 @@ public class FotaApi {
                         OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "Could not discover OTA service.");
                     }
                 } else if (action.equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL)) {
-                    OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "Could not discover services"); // TODO: fix actions?
+                    OTAFirmwareUpgrade.OTAFinished(mContext, ACTION_FOTA_FAIL, "Could not discover services");
                 } else if (action.equals(ACTION_FOTA_FILE_DOWNLOADED) && !mIsFotaInProgress) {
                     mIsFotaInProgress = true;
                     BluetoothLeService.unregisterBroadcastReceiver(mContext, mBootModeReceiver);
@@ -357,8 +363,8 @@ public class FotaApi {
      * @param userConfirmation: if the user has confirmed that they want to do a firmware update of their device
      */
     public void doFirmwareUpdate(boolean userConfirmation){
-        BluetoothLeService.registerBroadcastReceiver(mContext, mDiscoverImmediateAlertServiceReceiver, Utils.makeGattUpdateIntentFilter());
         if (userConfirmation && mUpdatePossible){
+            BluetoothLeService.registerBroadcastReceiver(mContext, mDiscoverImmediateAlertServiceReceiver, Utils.makeGattUpdateIntentFilter());
             mShouldPostToBackend = true;
 
             // Timeout check
@@ -369,7 +375,7 @@ public class FotaApi {
             int connectionState = BluetoothLeService.getConnectionState(device);
             if (device.getBondState() == BOND_BONDED && connectionState == STATE_CONNECTED){
                 if (!BluetoothLeService.discoverServices()){
-                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_COULD_NOT_BE_STARTED, "Initial service discovery failed"); //TODO: change action?
+                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_COULD_NOT_BE_STARTED, "Could not start service discovery");
                 }
             } else {
                 // Broadcast message saying that FOTA could not be started because the device isn't bonded and connected
@@ -396,10 +402,12 @@ public class FotaApi {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
 
-                if (!response.isSuccessful()) {
+                if (!response.isSuccessful() || response.code() == 204) {
+                    // 204 No Content, no FW file returned for the specified HW rev
                     broadcastFirmwareCheck(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
                     return;
                 }
+
                 // Get filename from Content-Disposition
                 String contentDisposition = response.raw().header("Content-Disposition");
                 String strFilename = "filename=";
@@ -428,7 +436,7 @@ public class FotaApi {
             }
         };
 
-        mBackend.downloadLatestFirmwareFile(callback);
+        mBackend.downloadLatestFirmwareFile(callback, mDeviceInformation);
     }
 
     /**
@@ -472,7 +480,7 @@ public class FotaApi {
                 broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
             }
         } else {
-            broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);;
+            broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
         }
     }
 
@@ -481,18 +489,24 @@ public class FotaApi {
      */
     private void checkRemainingPrerequisites(){
         // Get latest available firmware version and do the checks on response
-        Callback callback = new Callback<List<Firmware>>() {
+        Callback callback = new Callback<Firmware>() {
             @Override
-            public void onResponse(Call<List<Firmware>> call, Response<List<Firmware>> response) {
+            public void onResponse(Call<Firmware> call, Response<Firmware> response) {
 
                 if (!response.isSuccessful()) {
                     broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
                     return;
                 }
 
+                if (response.code() == 204) {
+                    // 204 No Content, no FW file for the specified HW rev
+                    broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS);
+                    return;
+                }
+
                 // Compare firmware versions
-                List<Firmware> versions = response.body();
-                latestFirmwareVersion = versions.get(0).getFirmwareVersion();
+                Firmware fwResponse = response.body();
+                latestFirmwareVersion = fwResponse.getFirmwareVersion();
                 boolean updateExists = (Utils.compareVersion((String)mDeviceInformation.get("FirmwareRevision"), latestFirmwareVersion) < 0);
                 if (!updateExists){
                     broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS);
@@ -512,12 +526,12 @@ public class FotaApi {
             }
 
             @Override
-            public void onFailure(Call<List<Firmware>> call, Throwable t) {
+            public void onFailure(Call<Firmware> call, Throwable t) {
                 broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
             }
         };
 
-        mBackend.getLatestFirmwareVersion(callback);
+        mBackend.getLatestFirmwareVersion(callback, mDeviceInformation);
     }
 
     /**

@@ -41,8 +41,8 @@ public class BackendApiRequest {
      * the response in any way they like
      * @param callback
      */
-    public void getLatestFirmwareVersion(Callback<List<Firmware>> callback){
-        Call<List<Firmware>> call = mIzFotaApi.getLatestFirmwareVersion(JWThandler.getAuthToken(mContext));
+    public void getLatestFirmwareVersion(Callback<Firmware> callback, Dictionary deviceInfo){
+        Call<Firmware> call = mIzFotaApi.getLatestFirmwareVersion(JWThandler.getAuthToken(mContext, deviceInfo));
         call.enqueue(callback);
     }
 
@@ -51,8 +51,8 @@ public class BackendApiRequest {
      * the response in any way they like
      * @param callback
      */
-    public void downloadLatestFirmwareFile(Callback<ResponseBody> callback){
-        Call<ResponseBody> call = mIzFotaApi.downloadLatestFirmware(JWThandler.getAuthToken(mContext));
+    public void downloadLatestFirmwareFile(Callback<ResponseBody> callback, Dictionary deviceInfo){
+        Call<ResponseBody> call = mIzFotaApi.downloadLatestFirmware(JWThandler.getAuthToken(mContext, deviceInfo));
         call.enqueue(callback);
     }
 
@@ -70,7 +70,7 @@ public class BackendApiRequest {
         mRetryCounter = 0;
 
         // Call API
-        Call<Void> call = mIzFotaApi.postData(JWThandler.getAuthToken(mContext), history);
+        Call<Void> call = mIzFotaApi.postData(JWThandler.getAuthToken(mContext, deviceInfo), history);
         // Clone the call so we can resend it
         mPostCall = call.clone();
 

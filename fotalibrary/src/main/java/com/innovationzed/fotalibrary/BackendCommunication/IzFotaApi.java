@@ -19,7 +19,7 @@ public interface IzFotaApi {
 
     @Headers({"Content-Type: application/json;charset=UTF-8"})
     @GET("latest_fw_version/")
-    Call<List<Firmware>> getLatestFirmwareVersion(@Header("Authorization") String authHeader);
+    Call<Firmware> getLatestFirmwareVersion(@Header("Authorization") String authHeader);
 
     @Headers({"Content-Type: application/json;charset=UTF-8"})
     @POST("post_results/")
