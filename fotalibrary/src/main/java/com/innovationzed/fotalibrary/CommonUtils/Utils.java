@@ -117,7 +117,6 @@ public class Utils {
      * @param reason for finishing this way (error message etc)
      */
     public static void broadcastOTAFinished(Context context, String action, String reason){
-        deleteFirmwareFile();
         broadcastOTAFinished(context, action, reason, false);
     }
 
@@ -128,6 +127,7 @@ public class Utils {
      * @param reason for finishing this way (error message etc)
      */
     public static void broadcastOTAFinished(Context context, String action, String reason, boolean bootMode){
+        deleteFirmwareFile();
         Intent otaFinishedIntent = new Intent(action);
         Bundle bundle = new Bundle();
         bundle.putString(OTA_REASON, reason);

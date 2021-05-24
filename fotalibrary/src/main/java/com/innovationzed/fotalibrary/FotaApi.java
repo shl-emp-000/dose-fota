@@ -390,7 +390,6 @@ public class FotaApi {
             downloadFirmwareFile();
         }
         else {
-            Utils.deleteFirmwareFile();
             // This won't be posted to backend, it's just a fail broadcast for the 3rd party app
             Utils.broadcastOTAFinished(mContext, ACTION_FOTA_COULD_NOT_BE_STARTED, "Firmware update was not possible or user has not confirmed update.");
         }

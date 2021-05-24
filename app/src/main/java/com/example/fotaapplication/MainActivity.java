@@ -47,6 +47,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private FotaApi mFotaApi;
     private static boolean mUserWantsToUpdate = false;
     private static boolean mFotaInProgress = false;
+    private static String mCurrentText = "";
 
     // Receiver for the possible actions that can be broadcasted from the FotaApi
     private BroadcastReceiver mOTAStatusReceiver = new BroadcastReceiver() {
@@ -109,39 +110,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // DOSE v5 MAC 00:A0:50:E2:65:48
         mFotaApi = new FotaApi(this, "00:A0:50:B4:42:33"); // MAC address is hardcoded at this point
 
+        // Register receiver
+        LocalBroadcastManager.getInstance(this).registerReceiver(mOTAStatusReceiver, Utils.make3rdPartyIntentFilter());
+
         // Attach onClickListeners
         ((Button)findViewById(R.id.buttonMacAddress)).setOnClickListener(this);
         ((Button)findViewById(R.id.buttonPossible)).setOnClickListener(this);
         ((Button)findViewById(R.id.buttonUserConfirmation)).setOnClickListener(this);
         ((Button)findViewById(R.id.buttonFota)).setOnClickListener(this);
 
-        if (mFotaInProgress) {
-            setTextInformation("Firmware upgrade in progress...");
-        }
-
+        setTextInformation(mCurrentText);
     }
 
     @Override
     protected void onResume() {
-        // Register receiver
-        LocalBroadcastManager.getInstance(this).registerReceiver(mOTAStatusReceiver, Utils.make3rdPartyIntentFilter());
         TextView textView = (TextView)findViewById(R.id.textViewMacAddress);
         textView.requestFocus();
-        if (mFotaInProgress) {
-            setTextInformation("Firmware upgrade in progress...");
-        }
+        setTextInformation(mCurrentText);
         super.onResume();
     }
 
     @Override
     protected void onPause() {
-        // Unregister receiver
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(mOTAStatusReceiver);
         super.onPause();
     }
 
     @Override
     public void onDestroy(){
+        // Unregister receiver
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mOTAStatusReceiver);
         super.onDestroy();
     }
 
@@ -183,6 +180,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void setTextInformation(String s){
+        mCurrentText = s;
         ((TextView)findViewById(R.id.text_info)).setText(s);
     }
 
