@@ -118,7 +118,7 @@ public class Utils {
      */
     public static void broadcastOTAFinished(Context context, String action, String reason){
         deleteFirmwareFile();
-       broadcastOTAFinished(context, action, reason, false);
+        broadcastOTAFinished(context, action, reason, false);
     }
 
     /**

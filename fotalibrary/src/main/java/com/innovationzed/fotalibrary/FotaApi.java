@@ -435,6 +435,7 @@ public class FotaApi {
                     String versionNumber = filename.substring(0, filename.length() - ".cyacd2".length());
                     if (!versionNumber.equalsIgnoreCase(latestFirmwareVersion)) {
                         broadcastTo3rdPartyApp(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+                        Utils.broadcastOTAFinished(mContext, ACTION_FOTA_FAIL, "The version number of the downloaded file is not the same as the latest version number downloaded before.");
                         return;
                     }
                 }
