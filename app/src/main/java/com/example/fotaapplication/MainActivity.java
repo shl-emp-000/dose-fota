@@ -3,6 +3,7 @@ package com.example.fotaapplication;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -151,11 +152,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 // This button is just for testing
                 EditText mac = (EditText) findViewById(R.id.editTextMacAddress);
                 String macString = mac.getText().toString();
-                if (macString != null || macString != ""){
+                if (BluetoothAdapter.checkBluetoothAddress(macString)){
                     mFotaApi.changeDevice(macString);
                     setTextInformation("Device was set to " + macString);
                 } else {
-                    setTextInformation("Device not changed.");
+                    setTextInformation("Device not changed, enter a valid MAC address.");
                 }
                 InputMethodManager imm = (InputMethodManager) this.getSystemService(Activity.INPUT_METHOD_SERVICE);
                 imm.hideSoftInputFromWindow(view.getWindowToken(), 0);

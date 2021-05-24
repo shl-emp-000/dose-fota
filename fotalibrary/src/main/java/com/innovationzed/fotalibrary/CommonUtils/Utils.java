@@ -49,20 +49,13 @@ import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.util.Log;
 
 import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import okhttp3.ResponseBody;
 
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_BLE_CONNECTION_FAILED;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_COULD_NOT_BE_STARTED;
@@ -91,6 +84,9 @@ public class Utils {
 
     public static final String OTA_REASON = "OTA_REASON";
     public static final String IS_IN_BOOT_MODE = "IS_IN_BOOT_MODE";
+
+    public static final String REGEX_MATCHES_CYACD2 = "(?i).*\\.cyacd2$";
+    public static final String REGEX_ENDS_WITH_CYACD_OR_CYACD2 = "(?i)\\.cyacd2?$";
 
     // Shared preference constant
     private static final String SHARED_PREF_NAME = "FOTA Shared Preference";
@@ -424,6 +420,15 @@ public class Utils {
             return false;
         }
 
+    }
+
+    /**
+     * Checks if the file is a .cyacd2 file
+     * @param file
+     * @return true if the file is a cyacd2
+     */
+    public static boolean isCyacd2File(String file) { //TODO: tests
+        return file.matches(REGEX_MATCHES_CYACD2);
     }
 
     public static String byteArrayToHex(byte[] bytes) {

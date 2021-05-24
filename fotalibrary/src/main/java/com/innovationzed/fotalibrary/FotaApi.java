@@ -17,6 +17,7 @@ import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
 import com.innovationzed.fotalibrary.BLEConnectionServices.DeviceInformationService;
 import com.innovationzed.fotalibrary.BackendCommunication.BackendApiRequest;
 import com.innovationzed.fotalibrary.BackendCommunication.Firmware;
+import com.innovationzed.fotalibrary.CommonUtils.Constants;
 import com.innovationzed.fotalibrary.CommonUtils.FotaBroadcastReceiver;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
@@ -28,7 +29,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Dictionary;
-import java.util.List;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -147,7 +147,7 @@ public class FotaApi {
                 if (action.equals(ACTION_GATT_CONNECTED)) {
                     BluetoothLeService.discoverServices();
                 } else if (action.equals(ACTION_GATT_DISCONNECTED)) {
-                    broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
+                    broadcastTo3rdPartyApp(ACTION_FOTA_BLE_CONNECTION_FAILED);
                 } else if (action.equals(ACTION_GATT_SERVICES_DISCOVERED)) {
                     BluetoothGattService service = BluetoothLeService.getService(UUIDDatabase.UUID_DEVICE_INFORMATION_SERVICE);
                     if (null != service) {
@@ -156,10 +156,10 @@ public class FotaApi {
                             mDeviceInformationService.startReadingDeviceInfo(mContext);
                         }
                     } else {
-                        broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ);
+                        broadcastTo3rdPartyApp(ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ);
                     }
                 } else if (action.equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL)) {
-                    broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
+                    broadcastTo3rdPartyApp(ACTION_FOTA_BLE_CONNECTION_FAILED);
                 } else if (action.equals(ACTION_FOTA_DEVICE_INFO_READ)) {
                     if (null != mDeviceInformationService) {
                         mDeviceInformationService.stop(mContext);
@@ -181,7 +181,7 @@ public class FotaApi {
                             mBatteryInformationService.startReadingBatteryInfo(mContext);
                         }
                     } else {
-                        broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ);
+                        broadcastTo3rdPartyApp(ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ);
                     }
                 } else if (action.equals(ACTION_FOTA_DEVICE_BATTERY_READ)) {
                     if (null != mBatteryInformationService) {
@@ -231,7 +231,7 @@ public class FotaApi {
                     jumpToBoot();
                 } else if (action.equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL)) {
                     BluetoothLeService.unregisterBroadcastReceiver(mContext, mDiscoverImmediateAlertServiceReceiver);
-                    broadcastFirmwareCheck(ACTION_FOTA_COULD_NOT_BE_STARTED);
+                    broadcastTo3rdPartyApp(ACTION_FOTA_COULD_NOT_BE_STARTED);
                 }
             }
 
@@ -409,9 +409,16 @@ public class FotaApi {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
 
-                if (!response.isSuccessful() || response.code() == 204) {
+                if (!response.isSuccessful()) {
+                    broadcastTo3rdPartyApp(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_FAIL, "Response from downloadLatestFirmwareFile was not successful.");
+                    return;
+                }
+
+                if (response.code() == 204) {
                     // 204 No Content, no FW file returned for the specified HW rev
-                    broadcastFirmwareCheck(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+                    broadcastTo3rdPartyApp(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_FAIL, "No firmware file exists for current hardware.");
                     return;
                 }
 
@@ -420,6 +427,17 @@ public class FotaApi {
                 String strFilename = "filename=";
                 int startIndex = contentDisposition.indexOf(strFilename);
                 String filename = contentDisposition.substring(startIndex + strFilename.length());
+
+                boolean isCyacd2File = filename != null && Utils.isCyacd2File(filename);
+                Utils.setBooleanSharedPreference(mContext, Constants.PREF_IS_CYACD2_FILE, isCyacd2File);
+
+                if (isCyacd2File) {
+                    String versionNumber = filename.substring(0, filename.length() - ".cyacd2".length());
+                    if (!versionNumber.equalsIgnoreCase(latestFirmwareVersion)) {
+                        broadcastTo3rdPartyApp(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+                        return;
+                    }
+                }
 
                 // Create folder ROOT_DIR if it doesn't exist
                 File folder = new File(ROOT_DIR);
@@ -431,15 +449,17 @@ public class FotaApi {
 
                 if (writtenToDisk) {
                     downloadedFirmwareDir = firmwarePath;
-                    broadcastFOTAProgress(ACTION_FOTA_FILE_DOWNLOADED);
+                    BluetoothLeService.sendLocalBroadcastIntent(mContext, new Intent(ACTION_FOTA_FILE_DOWNLOADED));
                 } else {
-                    broadcastFirmwareCheck(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+                    broadcastTo3rdPartyApp(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+                    Utils.broadcastOTAFinished(mContext, ACTION_FOTA_FAIL, "Firmware file could not be written to disk on phone.");
                 }
             }
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
-                broadcastFirmwareCheck(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+                broadcastTo3rdPartyApp(ACTION_FOTA_FILE_DOWNLOAD_FAILED);
+                Utils.broadcastOTAFinished(mContext, ACTION_FOTA_FAIL, "Call to downloadLatestFirmwareFile failed.");
             }
         };
 
@@ -460,14 +480,14 @@ public class FotaApi {
                 mContext.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
                 mContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
         if (!permissions) {
-            broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED);
+            broadcastTo3rdPartyApp(ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED);
             return;
         }
 
         // Check wifi and network connection
         boolean networkConnection = Utils.checkWifi(mContext) && Utils.checkNetwork(mContext);
         if (!networkConnection) {
-            broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION);
+            broadcastTo3rdPartyApp(ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION);
             return;
         }
 
@@ -476,7 +496,7 @@ public class FotaApi {
         int percentage = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
         boolean enoughBatteryPhone = percentage >= 50;
         if (!enoughBatteryPhone) {
-            broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE);
+            broadcastTo3rdPartyApp(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE);
             return;
         }
 
@@ -484,10 +504,10 @@ public class FotaApi {
         BluetoothDevice device = BluetoothLeService.getRemoteDevice(FotaApi.macAddress);
         if (device.getBondState() == BOND_BONDED){
             if (!BluetoothLeService.connect(FotaApi.macAddress, mContext)){
-                broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
+                broadcastTo3rdPartyApp(ACTION_FOTA_BLE_CONNECTION_FAILED);
             }
         } else {
-            broadcastFirmwareCheck(ACTION_FOTA_BLE_CONNECTION_FAILED);
+            broadcastTo3rdPartyApp(ACTION_FOTA_BLE_CONNECTION_FAILED);
         }
     }
 
@@ -501,13 +521,13 @@ public class FotaApi {
             public void onResponse(Call<Firmware> call, Response<Firmware> response) {
 
                 if (!response.isSuccessful()) {
-                    broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
+                    broadcastTo3rdPartyApp(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
                     return;
                 }
 
                 if (response.code() == 204) {
                     // 204 No Content, no FW file for the specified HW rev
-                    broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS);
+                    broadcastTo3rdPartyApp(ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS);
                     return;
                 }
 
@@ -516,25 +536,25 @@ public class FotaApi {
                 latestFirmwareVersion = fwResponse.getFirmwareVersion();
                 boolean updateExists = (Utils.compareVersion((String)mDeviceInformation.get("FirmwareRevision"), latestFirmwareVersion) < 0);
                 if (!updateExists){
-                    broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS);
+                    broadcastTo3rdPartyApp(ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS);
                     return;
                 }
 
                 // Check device battery
                 boolean enoughBatteryDevice = (int)mDeviceInformation.get("BatteryLevel") >= 50;
                 if (!enoughBatteryDevice) {
-                    broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE);
+                    broadcastTo3rdPartyApp(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE);
                     return;
                 }
 
                 // If FOTA is possible, broadcast ACTION_FOTA_POSSIBLE
                 mUpdatePossible = true;
-                broadcastFirmwareCheck(ACTION_FOTA_POSSIBLE);
+                broadcastTo3rdPartyApp(ACTION_FOTA_POSSIBLE);
             }
 
             @Override
             public void onFailure(Call<Firmware> call, Throwable t) {
-                broadcastFirmwareCheck(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
+                broadcastTo3rdPartyApp(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED);
             }
         };
 
@@ -542,19 +562,10 @@ public class FotaApi {
     }
 
     /**
-     * Sends a local broadcast
-     * @param action
-     */
-    private void broadcastFOTAProgress(String action){
-        Intent intent = new Intent(action);
-        BluetoothLeService.sendLocalBroadcastIntent(mContext, intent);
-    }
-
-    /**
      * Sends a local broadcast and stops listening in receiver
      * @param action
      */
-    private void broadcastFirmwareCheck(String action){
+    private void broadcastTo3rdPartyApp(String action){
         BluetoothLeService.unregisterBroadcastReceiver(mContext, mAppModeReceiver);
         mHasCheckedUpdatePossible = true;
         mTimeoutHandler.removeCallbacks(mCheckFirmwareRunnable);

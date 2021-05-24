@@ -26,6 +26,7 @@ import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_DE
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_FILE_DOWNLOADED;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_FILE_DOWNLOAD_FAILED;
 import static com.innovationzed.fotalibrary.CommonUtils.Utils.OTA_REASON;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class UtilsTest {
@@ -98,6 +99,18 @@ public class UtilsTest {
         assertTrue(firstParameterOld == -1);
         assertTrue(firstParameterNew == 1);
         assertTrue(identicalParameters == 0);
+    }
+
+    /**
+     * Tests the 3 combinations of input to compareVersion
+     */
+    @Test
+    public void isCyacd2File() {
+        String isCyacd2 = "file.cyacd2";
+        String isNotCyacd2 = "file.abc";
+
+        assertTrue(Utils.isCyacd2File(isCyacd2));
+        assertFalse(Utils.isCyacd2File(isNotCyacd2));
     }
 
     /**

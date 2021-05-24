@@ -68,9 +68,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
     private final IBinder mBinder = new LocalBinder();
     public boolean mBound;
 
-    //Option Mapping
-    public static final String REGEX_MATCHES_CYACD2 = "(?i).*\\.cyacd2$";
-    public static final String REGEX_ENDS_WITH_CYACD_OR_CYACD2 = "(?i)\\.cyacd2?$";
     public static boolean mFileUpgradeStarted = false;
 
     private static OTAFUHandler DUMMY_HANDLER = (OTAFUHandler) Proxy.newProxyInstance(OTAFirmwareUpgrade.class.getClassLoader(), new Class<?>[]{OTAFUHandler.class}, new InvocationHandler() {
@@ -132,9 +129,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
             if (OTAFirmwareUpgrade.mOtaCharacteristic == null){
                 Utils.broadcastOTAFinished(this, ACTION_FOTA_FAIL, "getGattData() failed (OTAFirmwareUpgrade.mOtaCharacteristic is null)", true);
             }
-
-            boolean isCyacd2File = downloadedFirmwareDir != null && isCyacd2File(downloadedFirmwareDir);
-            Utils.setBooleanSharedPreference(this, Constants.PREF_IS_CYACD2_FILE, isCyacd2File);
             mOTAFUHandler = new OTAFUHandler_v1(this, OTAFirmwareUpgrade.mOtaCharacteristic, downloadedFirmwareDir, this);
 
             try {
@@ -260,8 +254,6 @@ public class OTAFirmwareUpgrade extends Service implements OTAFUHandlerCallback 
         OTAFirmwareUpgrade.mFileUpgradeStarted = status;
     }
 
-    private boolean isCyacd2File(String file) {
-        return file.matches(REGEX_MATCHES_CYACD2);
-    }
+
 
 }
