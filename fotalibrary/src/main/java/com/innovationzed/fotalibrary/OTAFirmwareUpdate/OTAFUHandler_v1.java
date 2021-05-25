@@ -310,7 +310,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
     private void OTAFinished(String action, String reason){
         resetSharedPreferences();
         stopRepeatingTask();
-        Utils.broadcastOTAFinished(mContext, action, reason, true);
+        Utils.broadcastOTAFinished(mContext, action, reason, !action.equals(ACTION_FOTA_SUCCESS)); // if it's not a success then it's in boot mode
     }
 
     private void programNextRow() {
