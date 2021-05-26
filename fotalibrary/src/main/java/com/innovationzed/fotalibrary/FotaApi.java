@@ -343,8 +343,6 @@ public class FotaApi {
             mOTAServiceIntent = new Intent(mContext, OTAFirmwareUpgrade.class);
             mTimeoutHandler = new Handler();
 
-            // Register receiver
-            BluetoothLeService.registerBroadcastReceiver(mContext, mFOTAReceiver, Utils.makeFotaApiIntentFilter());
             // Start BLE service
             mContext.startService(new Intent(mContext, BluetoothLeService.class));
 
@@ -372,7 +370,8 @@ public class FotaApi {
      * - firmware update exists
      */
     public void isFirmwareUpdatePossible(){
-        // Register receiver
+        // Register receivers
+        BluetoothLeService.registerBroadcastReceiver(mContext, mFOTAReceiver, Utils.makeFotaApiIntentFilter());
         BluetoothLeService.registerBroadcastReceiver(mContext, mAppModeReceiver, Utils.makeAppModeIntentFilter());
         checkFirmwareUpdatePossible();
     }
