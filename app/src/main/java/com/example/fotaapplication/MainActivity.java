@@ -50,6 +50,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static boolean mFotaInProgress = false;
     private static String mCurrentText = "";
     private TableLayout mFirmwareTableLayout;
+    private TableLayout mDeviceDetailsTableLayout;
 
     // Receiver for the possible actions that can be broadcasted from the FotaApi
     private BroadcastReceiver mOTAStatusReceiver = new BroadcastReceiver() {
@@ -121,9 +122,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ((Button)findViewById(R.id.buttonUserConfirmation)).setOnClickListener(this);
         ((Button)findViewById(R.id.buttonFota)).setOnClickListener(this);
         ((Button)findViewById(R.id.buttonRefreshFwTable)).setOnClickListener(this);
+        ((Button)findViewById(R.id.buttonRefreshDeviceInfo)).setOnClickListener(this);
 
 
         mFirmwareTableLayout = (TableLayout) findViewById(R.id.tableAvailableFw);
+        mDeviceDetailsTableLayout = (TableLayout) findViewById(R.id.tableDeviceDetails);
 
         setTextInformation(mCurrentText);
     }
@@ -180,6 +183,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.buttonRefreshFwTable:
                 getAllFirmwares();
+                break;
+            case R.id.buttonRefreshDeviceInfo:
+                getDeviceDetails();
                 break;
             default:
                 break;
@@ -257,5 +263,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void getAllFirmwares() {
         mFotaApi.getAllFirmwares(mFirmwareTableLayout);
 
+    }
+
+    private void getDeviceDetails() {
+        mFotaApi.getDeviceDetails(mDeviceDetailsTableLayout);
     }
 }

@@ -68,12 +68,14 @@
             android:textStyle="bold" />
     </ScrollView>
 
+    <!-- Available Firmware table -->
     <Button
         android:id="@+id/buttonRefreshFwTable"
         android:layout_width="wrap_content"
         android:layout_height="35dp"
         android:layout_below="@id/scrollViewInfo"
         android:layout_alignParentEnd="true"
+        android:layout_marginTop="5dp"
         android:layout_marginEnd="15dp"
         android:text="Refresh" />
 
@@ -84,7 +86,7 @@
         android:layout_below="@id/scrollViewInfo"
         android:layout_alignParentStart="true"
         android:layout_marginStart="12dp"
-        android:layout_marginTop="1dp"
+        android:layout_marginTop="5dp"
         android:text="Available Firmware"
         android:textAppearance="@style/TextAppearance.AppCompat.Large" />
 
@@ -103,7 +105,49 @@
             android:id="@+id/tableAvailableFw"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:stretchColumns="*"></TableLayout>
+            android:stretchColumns="*">
+        </TableLayout>
+    </ScrollView>
+
+    <!-- Device Details table -->
+    <Button
+        android:id="@+id/buttonRefreshDeviceInfo"
+        android:layout_width="wrap_content"
+        android:layout_height="35dp"
+        android:layout_below="@id/scrollViewFwTable"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="5dp"
+        android:layout_marginEnd="15dp"
+        android:text="Refresh" />
+
+    <TextView
+        android:id="@+id/textDeviceDetails"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/scrollViewFwTable"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="5dp"
+        android:text="Device Details"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large" />
+
+    <ScrollView
+        android:id="@+id/scrollViewDeviceDetails"
+        android:layout_width="382dp"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/textDeviceDetails"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="15dp">
+
+        <TableLayout
+            android:id="@+id/tableDeviceDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stretchColumns="*">
+        </TableLayout>
     </ScrollView>
 
 </RelativeLayout>

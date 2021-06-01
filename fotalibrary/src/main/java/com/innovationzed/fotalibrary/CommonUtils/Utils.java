@@ -378,6 +378,21 @@ public class Utils {
     }
 
     /**
+     * Adding the necessary Intent filters for Broadcast receiver in FotaApi
+     *
+     * @return {@link IntentFilter}
+     */
+    public static IntentFilter makeDeviceInfoIntentFilter(){
+        final IntentFilter filter = new IntentFilter();
+        filter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
+        filter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
+        filter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
+        filter.addAction(BluetoothLeService.ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL);
+        filter.addAction(ACTION_FOTA_DEVICE_INFO_READ);
+        return filter;
+    }
+
+    /**
       * Check whether Internet connection is enabled on the device
       *
       * @param context

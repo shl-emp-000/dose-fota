@@ -99,6 +99,8 @@ public class FotaApi {
     private DeviceInformationService mDeviceInformationService;
     private BatteryInformationService mBatteryInformationService;
 
+    private TableLayout mDeviceDetailsTableLayout;
+
     /**
      * Variables for timeout handling
      */
@@ -339,6 +341,61 @@ public class FotaApi {
     };
 
     /**
+     * BroadcastReceiver for reading Device Info
+     */
+    private FotaBroadcastReceiver mDeviceInfoReceiver = new FotaBroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            synchronized (this) {
+                final String action = intent.getAction();
+                if (action.equals(ACTION_GATT_CONNECTED)) {
+                    BluetoothLeService.discoverServices();
+                } else if (action.equals(ACTION_GATT_DISCONNECTED)) {
+                    writeDeviceInfoErrorTableRow("Device disconnected unexpectedly");
+                } else if (action.equals(ACTION_GATT_SERVICES_DISCOVERED)) {
+                    BluetoothGattService service = BluetoothLeService.getService(UUIDDatabase.UUID_DEVICE_INFORMATION_SERVICE);
+                    if (null != service) {
+                        if (null == mDeviceInformationService) {
+                            mDeviceInformationService = DeviceInformationService.create(service);
+                            mDeviceInformationService.startReadingDeviceInfo(mContext);
+                        }
+                    } else {
+                        writeDeviceInfoErrorTableRow("Unable to discover Device Information service");
+                    }
+                } else if (action.equals(ACTION_GATT_SERVICE_DISCOVERY_UNSUCCESSFUL)) {
+                    writeDeviceInfoErrorTableRow("Unable to discover GATT services");
+                } else if (action.equals(ACTION_FOTA_DEVICE_INFO_READ)) {
+                    if (null != mDeviceInformationService) {
+                        mDeviceInformationService.stop(mContext);
+                        mDeviceInformationService = null;
+                    }
+                    mDeviceInformation = DeviceInformationService.getDeviceInformation();
+
+                    mDeviceDetailsTableLayout.removeAllViews();
+                    // Populate table
+                    // First row, FW version
+                    TableRow row0 = new TableRow(mContext);
+                    TextView tv0 = new TextView(mContext);
+                    String text = "FW version " + mDeviceInformation.get("FirmwareRevision").toString();
+                    tv0.setText(text);
+                    row0.addView(tv0);
+                    mDeviceDetailsTableLayout.addView(row0);
+
+                    // Second row, HW version
+                    TableRow row1 = new TableRow(mContext);
+                    TextView tv1 = new TextView(mContext);
+                    text = "HW version " + mDeviceInformation.get("HardwareRevision").toString();
+                    tv1.setText(text);
+                    row1.addView(tv1);
+                    mDeviceDetailsTableLayout.addView(row1);
+
+                    BluetoothLeService.unregisterBroadcastReceiver(mContext, mDeviceInfoReceiver);
+                }
+            }
+        }
+    };
+
+    /**
      * API for performing firmware updates over-the-air via BLE
      * @param context: the current context
      * @param macAddress: MAC address of the device
@@ -468,6 +525,24 @@ public class FotaApi {
         mBackend.getAllFirmwareVersions(callback, mDeviceInformation);
     }
 
+    /**
+     * Get device details for displaying in table
+     *
+     */
+    public void getDeviceDetails(TableLayout deviceDetailsTableLayout) {
+        mDeviceDetailsTableLayout = deviceDetailsTableLayout;
+        BluetoothLeService.registerBroadcastReceiver(mContext, mDeviceInfoReceiver, Utils.makeDeviceInfoIntentFilter());
+
+        // Connect to device in order to read device information
+        BluetoothDevice device = BluetoothLeService.getRemoteDevice(FotaApi.macAddress);
+        if (device.getBondState() == BOND_BONDED){
+            if (!BluetoothLeService.connect(FotaApi.macAddress, mContext)){
+                writeDeviceInfoErrorTableRow("Unable to connect to device!");
+            }
+        } else {
+            writeDeviceInfoErrorTableRow("Device is not bonded/paired!");
+        }
+    }
 
     /********** PRIVATE HELPER FUNCTIONS **********/
 
@@ -735,5 +810,16 @@ public class FotaApi {
         tv.setText(errorMsg);
         row.addView(tv);
         firmwareTableLayout.addView(row);
+    }
+
+    private void writeDeviceInfoErrorTableRow(String errorMsg) {
+        mDeviceDetailsTableLayout.removeAllViews();
+        TableRow row = new TableRow(mContext);
+        TextView tv = new TextView(mContext);
+        tv.setText(errorMsg);
+        row.addView(tv);
+        mDeviceDetailsTableLayout.addView(row);
+
+        BluetoothLeService.unregisterBroadcastReceiver(mContext, mDeviceInfoReceiver);
     }
 }
