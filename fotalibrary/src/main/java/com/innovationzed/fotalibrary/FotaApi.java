@@ -7,21 +7,29 @@ import android.bluetooth.BluetoothGattService;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.ViewGroup;
+import android.widget.TableLayout;
+import android.widget.TableRow;
+import android.widget.TextView;
 
 import com.innovationzed.fotalibrary.BLEConnectionServices.BatteryInformationService;
 import com.innovationzed.fotalibrary.BLEConnectionServices.BluetoothLeService;
 import com.innovationzed.fotalibrary.BLEConnectionServices.DeviceInformationService;
 import com.innovationzed.fotalibrary.BackendCommunication.BackendApiRequest;
 import com.innovationzed.fotalibrary.BackendCommunication.Firmware;
+import com.innovationzed.fotalibrary.BackendCommunication.FwAndHwRev;
 import com.innovationzed.fotalibrary.CommonUtils.Constants;
 import com.innovationzed.fotalibrary.CommonUtils.FotaBroadcastReceiver;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
 import com.innovationzed.fotalibrary.CommonUtils.Utils;
 import com.innovationzed.fotalibrary.OTAFirmwareUpdate.OTAFirmwareUpgrade;
+
+import org.w3c.dom.Text;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -29,6 +37,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Dictionary;
+import java.util.List;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -395,6 +404,70 @@ public class FotaApi {
 
     }
 
+    /**
+     * Get a list of all firmwares on the server
+     *
+     */
+    public void getAllFirmwares(TableLayout firmwareTableLayout) {
+
+        Callback callback = new Callback<List<FwAndHwRev>>() {
+            @Override
+            public void onResponse(Call<List<FwAndHwRev>> call, Response<List<FwAndHwRev>> response) {
+
+                if (!response.isSuccessful()) {
+                    writeAvailableFwErrorTableRow("API request failed with code " + response.code(), firmwareTableLayout);
+                    return;
+                }
+
+                if (response.code() == 204) {
+                    // 204 No Content, no FW files on the server
+                    writeAvailableFwErrorTableRow("There are no firmware files on the server!", firmwareTableLayout);
+                    return;
+                }
+
+                List<FwAndHwRev> firmwares = response.body();
+
+                if (firmwares != null && !firmwares.isEmpty()) {
+                    firmwareTableLayout.removeAllViews();
+                    TableRow row0 = new TableRow(mContext);
+                    // Table header
+                    TextView tv0 = new TextView(mContext);
+                    tv0.setText("HW ver.");
+                    row0.addView(tv0);
+                    TextView tv1 = new TextView(mContext);
+                    tv1.setText("FW ver.");
+                    row0.addView(tv1);
+                    firmwareTableLayout.addView(row0);
+                    for (int i = 0; i < firmwares.size(); ++i) {
+                        TableRow row = new TableRow(mContext);
+                        TextView hwVer = new TextView(mContext);
+                        hwVer.setText(firmwares.get(i).getHardwareCompatibility());
+                        row.addView(hwVer);
+
+                        TextView fwVer = new TextView(mContext);
+                        fwVer.setText(firmwares.get(i).getFirmwareVersion());
+                        row.addView(fwVer);
+
+                        firmwareTableLayout.addView(row);
+                    }
+                } else {
+                    writeAvailableFwErrorTableRow("There are no firmware files on the server!", firmwareTableLayout);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<FwAndHwRev>> call, Throwable t) {
+                writeAvailableFwErrorTableRow("Error, network/request/response exception!", firmwareTableLayout);
+            }
+        };
+
+        if (mDeviceInformation == null) {
+            mDeviceInformation = DeviceInformationService.getDeviceInformation();
+        }
+
+        mBackend.getAllFirmwareVersions(callback, mDeviceInformation);
+    }
+
 
     /********** PRIVATE HELPER FUNCTIONS **********/
 
@@ -653,5 +726,14 @@ public class FotaApi {
         } catch (IOException e) {
             return false;
         }
+    }
+
+    private void writeAvailableFwErrorTableRow(String errorMsg, TableLayout firmwareTableLayout) {
+        firmwareTableLayout.removeAllViews();
+        TableRow row = new TableRow(mContext);
+        TextView tv = new TextView(mContext);
+        tv.setText(errorMsg);
+        row.addView(tv);
+        firmwareTableLayout.addView(row);
     }
 }

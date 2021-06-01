@@ -22,6 +22,10 @@ public interface IzFotaApi {
     Call<Firmware> getLatestFirmwareVersion(@Header("Authorization") String authHeader);
 
     @Headers({"Content-Type: application/json;charset=UTF-8"})
+    @GET("all_fw_versions/")
+    Call<List<FwAndHwRev>> getAlltFirmwareVersions(@Header("Authorization") String authHeader);
+
+    @Headers({"Content-Type: application/json;charset=UTF-8"})
     @POST("post_results/")
     Call<Void> postData(@Header("Authorization") String authHeader,
                         @Body HistoryRequest body

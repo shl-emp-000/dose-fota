@@ -37,6 +37,16 @@ public class BackendApiRequest {
     }
 
     /**
+     * Downloads the latest available firmware file. A callback is provided so that the caller can handle
+     * the response in any way they like
+     * @param callback
+     */
+    public void downloadLatestFirmwareFile(Callback<ResponseBody> callback, Dictionary deviceInfo){
+        Call<ResponseBody> call = mIzFotaApi.downloadLatestFirmware(JWThandler.getAuthToken(mContext, deviceInfo));
+        call.enqueue(callback);
+    }
+
+    /**
      * Gets the latest available firmware version. A callback is provided so that the caller can handle
      * the response in any way they like
      * @param callback
@@ -47,12 +57,12 @@ public class BackendApiRequest {
     }
 
     /**
-     * Downloads the latest available firmware file. A callback is provided so that the caller can handle
+     * Gets a list of available firmware versions and hardware compatibility. A callback is provided so that the caller can handle
      * the response in any way they like
      * @param callback
      */
-    public void downloadLatestFirmwareFile(Callback<ResponseBody> callback, Dictionary deviceInfo){
-        Call<ResponseBody> call = mIzFotaApi.downloadLatestFirmware(JWThandler.getAuthToken(mContext, deviceInfo));
+    public void getAllFirmwareVersions(Callback<List<FwAndHwRev>> callback, Dictionary deviceInfo){
+        Call<List<FwAndHwRev>> call = mIzFotaApi.getAlltFirmwareVersions(JWThandler.getAuthToken(mContext, deviceInfo));
         call.enqueue(callback);
     }
 

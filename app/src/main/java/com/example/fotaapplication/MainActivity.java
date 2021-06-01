@@ -15,6 +15,7 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TableLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -48,6 +49,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static boolean mUserWantsToUpdate = false;
     private static boolean mFotaInProgress = false;
     private static String mCurrentText = "";
+    private TableLayout mFirmwareTableLayout;
 
     // Receiver for the possible actions that can be broadcasted from the FotaApi
     private BroadcastReceiver mOTAStatusReceiver = new BroadcastReceiver() {
@@ -118,6 +120,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ((Button)findViewById(R.id.buttonPossible)).setOnClickListener(this);
         ((Button)findViewById(R.id.buttonUserConfirmation)).setOnClickListener(this);
         ((Button)findViewById(R.id.buttonFota)).setOnClickListener(this);
+        ((Button)findViewById(R.id.buttonRefreshFwTable)).setOnClickListener(this);
+
+
+        mFirmwareTableLayout = (TableLayout) findViewById(R.id.tableAvailableFw);
 
         setTextInformation(mCurrentText);
     }
@@ -171,6 +177,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 setTextInformation("Firmware upgrade in progress...");
                 mFotaInProgress = true;
                 mFotaApi.doFirmwareUpdate(mUserWantsToUpdate);
+                break;
+            case R.id.buttonRefreshFwTable:
+                getAllFirmwares();
                 break;
             default:
                 break;
@@ -242,6 +251,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
         return true;
+
+    }
+
+    private void getAllFirmwares() {
+        mFotaApi.getAllFirmwares(mFirmwareTableLayout);
 
     }
 }
