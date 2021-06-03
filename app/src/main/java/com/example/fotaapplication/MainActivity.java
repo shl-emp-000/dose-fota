@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
@@ -30,6 +31,10 @@ public class MainActivity extends AppCompatActivity {
         // - Manifest.permission.WRITE_EXTERNAL_STORAGE
         checkLocationPermission();
         checkStoragePermission();
+
+        String version = BuildConfig.VERSION_NAME;
+        ActionBar actionBar = getSupportActionBar();
+        actionBar.setTitle(getString(R.string.app_name) + " (v" + version + ")");
 
         if (currentFragment == UPDATE_FRAGMENT) {
             CommonUtils.replaceFragment(this, new UpdateFragment(), getString(R.string.update_fragment_tag), true);
