@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.SearchView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -32,6 +33,7 @@ public class ScannerFragment extends Fragment implements View.OnClickListener {
     private View mView;
     private DeviceAdapter mDeviceAdapter;
     private ListView mListView;
+    private SearchView mSearchView;
 
     // Bluetooth
     private BluetoothManager mBluetoothManager;
@@ -106,6 +108,27 @@ public class ScannerFragment extends Fragment implements View.OnClickListener {
         mListView = mView.findViewById(R.id.lvDevices);
         mListView.setAdapter(mDeviceAdapter);
 
+        mSearchView = mView.findViewById(R.id.svSearch);
+        mSearchView.setIconifiedByDefault(false);
+
+        mSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                mDeviceAdapter.setFilteringActive(true);
+                mDeviceAdapter.getFilter().filter(query);
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                if (!newText.isEmpty()) {
+                    mDeviceAdapter.setFilteringActive(true);
+                }
+                mDeviceAdapter.getFilter().filter(newText);
+                return true;
+            }
+        });
+
         if(initializeBluetooth()){
             startScanTimer();
             startScan();
@@ -117,6 +140,12 @@ public class ScannerFragment extends Fragment implements View.OnClickListener {
         switch (v.getId()) {
             case R.id.btnScan:
                 if (!mScanning) {
+                    mDeviceAdapter.setFilteringActive(false);
+                    if (!mSearchView.isIconified()) {
+                        mSearchView.onActionViewCollapsed();
+                        mSearchView.setIconified(false);
+                        mSearchView.clearFocus();
+                    }
                     startScanTimer();
                     startScan();
                 } else {
@@ -146,9 +175,9 @@ public class ScannerFragment extends Fragment implements View.OnClickListener {
         if (bondedDevices.size() > 0) {
             for (BluetoothDevice currentDevice : bondedDevices) {
                 mDeviceAdapter.addDevice(currentDevice, 1);
+                notifyDeviceListUpdated();
             }
         }
-        notifyDeviceListUpdated();
 
         // scan for other devices
         BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();

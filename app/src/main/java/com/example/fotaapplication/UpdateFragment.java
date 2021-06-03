@@ -40,7 +40,6 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
 
     private FotaApi mFotaApi;
     private static boolean mUserWantsToUpdate = false;
-    private static boolean mFotaInProgress = false;
     private static String mCurrentText = "";
     private TableLayout mFirmwareTableLayout;
     private TableLayout mDeviceDetailsTableLayout;
@@ -83,7 +82,6 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
                 } else if (action.equals(ACTION_FOTA_TIMEOUT)){
                     setTextInformation("Timeout.");
                 }
-                mFotaInProgress = false;
             }
         }
     };
@@ -162,7 +160,6 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
                 break;
             case R.id.buttonFota:
                 setTextInformation("Firmware upgrade in progress...");
-                mFotaInProgress = true;
                 mFotaApi.doFirmwareUpdate(mUserWantsToUpdate);
                 break;
             case R.id.buttonRefreshFwTable:
