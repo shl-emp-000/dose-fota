@@ -43,6 +43,8 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
     private static String mCurrentText = "";
     private TableLayout mFirmwareTableLayout;
     private TableLayout mDeviceDetailsTableLayout;
+    private EditFwServerDialogFragment mEditFwServerDialog;
+    private SelectFwServerDialogFragment mSelectFwServerDialog;
     private View mView;
 
     // Receiver for the possible actions that can be broadcasted from the FotaApi
@@ -119,9 +121,13 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
         getView().findViewById(R.id.buttonFota).setOnClickListener(this);
         getView().findViewById(R.id.buttonRefreshFwTable).setOnClickListener(this);
         getView().findViewById(R.id.buttonRefreshDeviceInfo).setOnClickListener(this);
+        getView().findViewById(R.id.buttonEditFwServer).setOnClickListener(this);
+        getView().findViewById(R.id.buttonSelectFwServer).setOnClickListener(this);
 
         mFirmwareTableLayout = getView().findViewById(R.id.tableAvailableFw);
         mDeviceDetailsTableLayout = getView().findViewById(R.id.tableDeviceDetails);
+        mEditFwServerDialog = new EditFwServerDialogFragment();
+        mSelectFwServerDialog = new SelectFwServerDialogFragment();
 
         super.onViewCreated(view, savedInstanceState);
     }
@@ -168,11 +174,21 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
             case R.id.buttonRefreshDeviceInfo:
                 getDeviceDetails();
                 break;
+            case R.id.buttonEditFwServer:
+                mEditFwServerDialog.show(getFragmentManager(),"EditFwServerDialog");
+                break;
+            case R.id.buttonSelectFwServer:
+                mSelectFwServerDialog.show(getFragmentManager(),"SelectFwServerDialog");
+                break;
             default:
                 break;
         }
         TextView textView = getView().findViewById(R.id.textViewMacAddress);
         textView.requestFocus();
+    }
+
+    public void setFirmwareServer(String urlAddress, String signKey) {
+        mFotaApi.setFirmwareServer(urlAddress, signKey);
     }
 
     private void setTextInformation(String s){

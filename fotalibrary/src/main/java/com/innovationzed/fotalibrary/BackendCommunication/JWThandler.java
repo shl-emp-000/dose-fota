@@ -17,6 +17,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
 public final class JWThandler {
+    private static String signKey = "";
     private static String mJwtString = "";
     private static String mAuthToken = "";
     private static String mSerialNumber = "";
@@ -31,6 +32,10 @@ public final class JWThandler {
         return mAuthToken;
     }
 
+    public static void setSignKey(String key) {
+        signKey = key;
+    }
+
     private JWThandler() {} // Make constructor private to make it a static class
 
     private static void buildNewAuthToken(Context current) {
@@ -38,13 +43,24 @@ public final class JWThandler {
         header.setType("JWT"); // Works without setting the type
         Date expTime = new Date();
         expTime.setTime(System.currentTimeMillis()+(40*60*1000)); // Token valid for 40 min
-        mJwtString = Jwts.builder().setHeader((Map<String, Object>) header).setId(UUID.randomUUID().toString()).setExpiration(expTime).claim("token_type", "access").claim("user_id", mSerialNumber).claim("hw_rev", mHardwareRevision).signWith(Keys.hmacShaKeyFor(current.getString(R.string.api_secret_key).getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256).compact();
+        if (signKey.isEmpty()) {
+            mJwtString = Jwts.builder().setHeader((Map<String, Object>) header).setId(UUID.randomUUID().toString()).setExpiration(expTime).claim("token_type", "access").claim("user_id", mSerialNumber).claim("hw_rev", mHardwareRevision).signWith(Keys.hmacShaKeyFor(current.getString(R.string.api_secret_key).getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256).compact();
+        }
+        else {
+            mJwtString = Jwts.builder().setHeader((Map<String, Object>) header).setId(UUID.randomUUID().toString()).setExpiration(expTime).claim("token_type", "access").claim("user_id", mSerialNumber).claim("hw_rev", mHardwareRevision).signWith(Keys.hmacShaKeyFor(signKey.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256).compact();
+        }
         mAuthToken = "Bearer " + mJwtString;
     }
 
     private static boolean isAuthTokenExpired(Context current) {
         boolean retVal = false;
-        Date jwtDate = Jwts.parserBuilder().setSigningKey(current.getString(R.string.api_secret_key).getBytes(StandardCharsets.UTF_8)).build().parseClaimsJws(mJwtString).getBody().getExpiration();
+        Date jwtDate;
+        if (signKey.isEmpty()) {
+            jwtDate = Jwts.parserBuilder().setSigningKey(current.getString(R.string.api_secret_key).getBytes(StandardCharsets.UTF_8)).build().parseClaimsJws(mJwtString).getBody().getExpiration();
+        }
+        else {
+            jwtDate = Jwts.parserBuilder().setSigningKey(signKey.getBytes(StandardCharsets.UTF_8)).build().parseClaimsJws(mJwtString).getBody().getExpiration();
+        }
         Date timeNow = new Date();
         if ((jwtDate.getTime() - timeNow.getTime())/1000 < (10*60)) { // If it is less than 10 min remaining on the token
             retVal = true;

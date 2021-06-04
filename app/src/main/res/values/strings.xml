@@ -5,4 +5,7 @@
     <string name="update_fragment_tag">Update fragment tag</string>
     <string name="button_device_scanning">Scanning... (tap to cancel)</string>
     <string name="button_device_not_scanning">Tap to scan for devices</string>
+
+    <string name="preferences_file_fw_servers">firmwareServerFile</string>
+    <string name="preferences_fw_servers_key">servers</string>
 </resources>

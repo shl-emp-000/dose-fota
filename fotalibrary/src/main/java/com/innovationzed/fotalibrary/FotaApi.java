@@ -21,6 +21,7 @@ import com.innovationzed.fotalibrary.BLEConnectionServices.DeviceInformationServ
 import com.innovationzed.fotalibrary.BackendCommunication.BackendApiRequest;
 import com.innovationzed.fotalibrary.BackendCommunication.Firmware;
 import com.innovationzed.fotalibrary.BackendCommunication.FwAndHwRev;
+import com.innovationzed.fotalibrary.BackendCommunication.JWThandler;
 import com.innovationzed.fotalibrary.CommonUtils.Constants;
 import com.innovationzed.fotalibrary.CommonUtils.FotaBroadcastReceiver;
 import com.innovationzed.fotalibrary.CommonUtils.UUIDDatabase;
@@ -538,6 +539,20 @@ public class FotaApi {
         } else {
             writeDeviceInfoErrorTableRow("Device is not bonded/paired!");
         }
+    }
+
+    /**
+     * Set FW server to communicate with
+     *
+     */
+    public void setFirmwareServer(String urlAddress, String signKey) {
+        if (urlAddress.isEmpty()) {
+            mBackend.setFirmwareServer(urlAddress);
+        } else {
+            String urlAddressWithApiPostfix = urlAddress.endsWith("/") ? urlAddress + "api/" : urlAddress + "/api/";
+            mBackend.setFirmwareServer(urlAddressWithApiPostfix);
+        }
+        JWThandler.setSignKey(signKey);
     }
 
     /********** PRIVATE HELPER FUNCTIONS **********/

@@ -51,12 +51,55 @@
             android:textStyle="bold" />
     </ScrollView>
 
+    <!-- Firmware server -->
+    <TextView
+        android:id="@+id/textFirmwareServer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/scrollViewInfo"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="5dp"
+        android:text="Firmware Server"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large" />
+
+    <Button
+        android:id="@+id/buttonEditFwServer"
+        android:layout_width="wrap_content"
+        android:layout_height="35dp"
+        android:layout_below="@id/scrollViewInfo"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="5dp"
+        android:layout_toEndOf="@+id/textFirmwareServer"
+        android:text="Edit" />
+
+    <Button
+        android:id="@+id/buttonSelectFwServer"
+        android:layout_width="wrap_content"
+        android:layout_height="35dp"
+        android:layout_below="@id/scrollViewInfo"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="5dp"
+        android:layout_marginEnd="15dp"
+        android:text="Select" />
+
+    <TextView
+        android:id="@+id/textSelectedFirmwareServer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/textFirmwareServer"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="5dp"
+        android:text="Default"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+
     <!-- Available Firmware table -->
     <Button
         android:id="@+id/buttonRefreshFwTable"
         android:layout_width="wrap_content"
         android:layout_height="35dp"
-        android:layout_below="@id/scrollViewInfo"
+        android:layout_below="@id/textSelectedFirmwareServer"
         android:layout_alignParentEnd="true"
         android:layout_marginTop="5dp"
         android:layout_marginEnd="15dp"
@@ -66,7 +109,7 @@
         android:id="@+id/textAvailableFirmware"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/scrollViewInfo"
+        android:layout_below="@id/textSelectedFirmwareServer"
         android:layout_alignParentStart="true"
         android:layout_marginStart="12dp"
         android:layout_marginTop="5dp"

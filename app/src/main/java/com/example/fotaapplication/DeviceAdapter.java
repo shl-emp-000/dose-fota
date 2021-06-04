@@ -87,7 +87,7 @@ public class DeviceAdapter extends BaseAdapter implements Filterable {
             @Override
             public void onClick(View v) {
                 FotaApi.macAddress = currentList.get(position).getAddress();
-                CommonUtils.replaceFragment(mActivity, new UpdateFragment(), "update fragment", true);
+                CommonUtils.replaceFragment(mActivity, new UpdateFragment(), mActivity.getString(R.string.update_fragment_tag), true);
             }
         });
 

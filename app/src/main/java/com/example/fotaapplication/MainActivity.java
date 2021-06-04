@@ -2,15 +2,25 @@ package com.example.fotaapplication;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Patterns;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.DialogFragment;
 
-public class MainActivity extends AppCompatActivity {
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity implements  SelectFwServerDialogFragment.SelectFwServerDialogListener {
 
     public static final int SCANNER_FRAGMENT = 1;
     public static final int UPDATE_FRAGMENT = 2;
@@ -87,6 +97,62 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return true;
+    }
+
+    // The dialog fragment receives a reference to this Activity through the
+    // Fragment.onAttach() callback, which it uses to call the following methods
+    // defined by the SelectFwServerDialogFragment.SelectFwServerDialogListener interface
+    @Override
+    public void onDialogPositiveClick(DialogFragment dialog)
+    {
+        SelectFwServerDialogFragment d = (SelectFwServerDialogFragment) dialog;
+        ArrayList<FirmwareServer> serverArray = new ArrayList<>();
+        UpdateFragment fragment = (UpdateFragment) this.getSupportFragmentManager().findFragmentByTag(getString(R.string.update_fragment_tag));
+        Toast toast;
+
+        if (null == fragment) {
+            toast = Toast.makeText(this, "Something went wrong, server not changed!", Toast.LENGTH_SHORT);
+            toast.show();
+            return;
+        }
+
+        if (d.getSelectedItem() < 0) {
+            // No item was selected, go with hardcoded server
+            fragment.setFirmwareServer("","");
+            ((TextView) this.findViewById(R.id.textSelectedFirmwareServer)).setText("Default");
+            toast = Toast.makeText(this, "No server selected, using the default!", Toast.LENGTH_SHORT);
+            toast.show();
+        } else {
+            // Load servers from preference
+            SharedPreferences prefs = this.getSharedPreferences(getString(R.string.preferences_file_fw_servers), Context.MODE_PRIVATE);
+
+            try {
+                serverArray = (ArrayList<FirmwareServer>) ObjectSerializer.deserialize(prefs.getString(getString(R.string.preferences_fw_servers_key), ObjectSerializer.serialize(new ArrayList<FirmwareServer>())));
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+
+            String urlAddress = serverArray.get(d.getSelectedItem()).getServerAddress();
+
+            if (Patterns.WEB_URL.matcher(urlAddress).matches()) {
+                fragment.setFirmwareServer(urlAddress, serverArray.get(d.getSelectedItem()).getServerSigningKey());
+                ((TextView) this.findViewById(R.id.textSelectedFirmwareServer)).setText(serverArray.get(d.getSelectedItem()).getServerAddress());
+                toast = Toast.makeText(this, "Successfully changed server!", Toast.LENGTH_SHORT);
+                toast.show();
+            } else {
+                toast = Toast.makeText(this, "Discarded server change, Invalid URL!", Toast.LENGTH_SHORT);
+                toast.show();
+            }
+        }
+    }
+
+    @Override
+    public void onDialogNegativeClick(DialogFragment dialog) {
+        // User touched the dialog's negative button
+        Toast toast = Toast.makeText(this, "Discarded server change!", Toast.LENGTH_SHORT);
+        toast.show();
     }
 
     private boolean checkStoragePermission() {

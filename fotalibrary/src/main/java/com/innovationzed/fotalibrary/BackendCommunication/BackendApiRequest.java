@@ -37,6 +37,18 @@ public class BackendApiRequest {
     }
 
     /**
+     * Set other FW server than default
+     */
+    public void setFirmwareServer(String urlAddress) {
+        if (urlAddress.isEmpty()) {
+            mRetrofit = RetrofitClient.getClient(BASE_URL);
+        } else {
+            mRetrofit = RetrofitClient.getClient(urlAddress);
+        }
+        mIzFotaApi = mRetrofit.create(IzFotaApi.class);
+    }
+
+    /**
      * Downloads the latest available firmware file. A callback is provided so that the caller can handle
      * the response in any way they like
      * @param callback
