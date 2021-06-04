@@ -32,8 +32,4 @@ public class FirmwareServer implements Serializable {
         this.mServerSigningKey = key;
     }
 
-    @Override
-    public String toString() {
-        return "Server [address=" + mServerAddress + ", key=" + mServerSigningKey + "]";
-    }
 }

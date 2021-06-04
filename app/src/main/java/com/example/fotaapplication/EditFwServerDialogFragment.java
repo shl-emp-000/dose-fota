@@ -17,6 +17,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
@@ -25,7 +26,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.List;
 
 public class EditFwServerDialogFragment extends DialogFragment {
     public static final int PICKFILE_RESULT_CODE = 1;
@@ -36,6 +36,7 @@ public class EditFwServerDialogFragment extends DialogFragment {
     private Uri fileUri;
     private String filePath;
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         // Use the Builder class for convenient dialog construction
@@ -60,22 +61,28 @@ public class EditFwServerDialogFragment extends DialogFragment {
                 .setView(v)
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        ArrayList<FirmwareServer> serverArray = getFirmwareServerList();
-
+                        ArrayList<FirmwareServer> serverArray;
                         Toast toast;
-                        if (serverArray.isEmpty()) {
-                            toast = Toast.makeText(getActivity(), "Unable to parse the selected file!", Toast.LENGTH_SHORT);
+
+                        if (null == fileUri) {
+                            toast = Toast.makeText(getActivity(), "No file selected, no changes done!", Toast.LENGTH_SHORT);
                         } else {
-                            // Save the server list to preference
-                            SharedPreferences prefs = getContext().getSharedPreferences(getString(R.string.preferences_file_fw_servers), Context.MODE_PRIVATE);
-                            SharedPreferences.Editor editor = prefs.edit();
-                            try {
-                                editor.putString(getString(R.string.preferences_fw_servers_key), ObjectSerializer.serialize((Serializable) serverArray));
-                            } catch (IOException e) {
-                                e.printStackTrace();
+                            serverArray = getFirmwareServerList();
+
+                            if (serverArray.isEmpty()) {
+                                toast = Toast.makeText(getActivity(), "Unable to parse the selected file!", Toast.LENGTH_SHORT);
+                            } else {
+                                // Save the server list to preference
+                                SharedPreferences prefs = getContext().getSharedPreferences(getString(R.string.preferences_file_fw_servers), Context.MODE_PRIVATE);
+                                SharedPreferences.Editor editor = prefs.edit();
+                                try {
+                                    editor.putString(getString(R.string.preferences_fw_servers_key), ObjectSerializer.serialize((Serializable) serverArray));
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                                editor.commit();
+                                toast = Toast.makeText(getActivity(), "Successfully updated the server list!", Toast.LENGTH_SHORT);
                             }
-                            editor.commit();
-                            toast = Toast.makeText(getActivity(), "Successfully updated the server list!", Toast.LENGTH_SHORT);
                         }
                         toast.show();
                     }
@@ -112,9 +119,10 @@ public class EditFwServerDialogFragment extends DialogFragment {
         Cursor cursor = null;
         String filePath = "";
         try {
-            String[] proj = { MediaStore.Images.Media.DATA };
+            final String column = "_data";
+            String[] proj = { column };
             cursor = getContext().getContentResolver().query(fileUri, proj, null, null, null);
-            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+            int column_index = cursor.getColumnIndexOrThrow(column);
             cursor.moveToFirst();
             filePath = cursor.getString(column_index);
         } catch (Exception e) {

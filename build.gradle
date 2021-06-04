@@ -17,6 +17,12 @@ allprojects {
         google()
         jcenter()
     }
+    // Uncomment to see unchecked/deprecated warnings
+    /*
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    }
+    */
 }
 
 task clean(type: Delete) {

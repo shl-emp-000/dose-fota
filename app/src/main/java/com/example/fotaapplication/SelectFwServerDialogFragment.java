@@ -7,12 +7,12 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 
 public class SelectFwServerDialogFragment extends DialogFragment {
     private int mSelectedItem = -1;
@@ -30,7 +30,7 @@ public class SelectFwServerDialogFragment extends DialogFragment {
 
     // Override the Fragment.onAttach() method to instantiate the SelectFwServerDialogListener
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         // Verify that the host activity implements the callback interface
         try {
@@ -43,6 +43,7 @@ public class SelectFwServerDialogFragment extends DialogFragment {
         }
     }
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         ArrayList<FirmwareServer> serverArray = new ArrayList<>();
@@ -75,7 +76,6 @@ public class SelectFwServerDialogFragment extends DialogFragment {
                 .setSingleChoiceItems(charSeqList, -1, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                Log.d("singlechoise", "Which: " + which);
                                 mSelectedItem = which;
                             }
                         })
