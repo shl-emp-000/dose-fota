@@ -202,7 +202,9 @@
                 android:id="@+id/tvStatusBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:layout_constraintTop_toBottomOf="parent"/>
+                app:layout_constraintTop_toBottomOf="parent"
+                android:minHeight="100dp"
+                android:background="@drawable/rectangle"/>
         </ScrollView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
