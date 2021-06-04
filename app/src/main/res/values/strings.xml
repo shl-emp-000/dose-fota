@@ -1,8 +1,16 @@
 <resources>
     <string name="app_name">Dose Firmware Update</string>
     <string name="unknown_device">Unknown device</string>
+    <string name="unknown_address">00:00:00:00:00:00</string>
     <string name="scanner_fragment_tag">Scanner fragment tag</string>
     <string name="update_fragment_tag">Update fragment tag</string>
+
+    <string name="textview_device">Device</string>
+    <string name="textview_firmware_server">Firmware server</string>
+    <string name="textview_available_firmware">Available firmware</string>
+    <string name="textview_device_details">Device details</string>
+    <string name="button_update_possible">Check if update is possible</string>
+    <string name="button_update_firmware">Update firmware</string>
     <string name="button_device_scanning">Scanning... (tap to cancel)</string>
     <string name="button_device_not_scanning">Tap to scan for devices</string>
 

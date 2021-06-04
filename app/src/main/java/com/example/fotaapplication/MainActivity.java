@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements  SelectFwServerDi
         if (d.getSelectedItem() < 0) {
             // No item was selected, go with hardcoded server
             fragment.setFirmwareServer("","");
-            ((TextView) this.findViewById(R.id.textSelectedFirmwareServer)).setText("Default");
+            ((TextView) this.findViewById(R.id.tvFirmwareServer)).setText("Default");
             toast = Toast.makeText(this, "No server selected, using the default!", Toast.LENGTH_SHORT);
             toast.show();
         } else {
@@ -138,7 +138,7 @@ public class MainActivity extends AppCompatActivity implements  SelectFwServerDi
 
             if (Patterns.WEB_URL.matcher(urlAddress).matches()) {
                 fragment.setFirmwareServer(urlAddress, serverArray.get(d.getSelectedItem()).getServerSigningKey());
-                ((TextView) this.findViewById(R.id.textSelectedFirmwareServer)).setText(serverArray.get(d.getSelectedItem()).getServerAddress());
+                ((TextView) this.findViewById(R.id.tvFirmwareServer)).setText(serverArray.get(d.getSelectedItem()).getServerAddress());
                 toast = Toast.makeText(this, "Successfully changed server!", Toast.LENGTH_SHORT);
                 toast.show();
             } else {

@@ -1,5 +1,6 @@
 package com.example.fotaapplication;
 
+import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -39,7 +40,6 @@ import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_TI
 public class UpdateFragment extends Fragment implements View.OnClickListener {
 
     private FotaApi mFotaApi;
-    private static boolean mUserWantsToUpdate = false;
     private static String mCurrentText = "";
     private TableLayout mFirmwareTableLayout;
     private TableLayout mDeviceDetailsTableLayout;
@@ -112,19 +112,25 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        ((TextView) view.findViewById(R.id.textViewMacAddress)).setText(FotaApi.macAddress);
+        ((TextView) view.findViewById(R.id.tvDeviceAddress)).setText(FotaApi.macAddress);
+        TextView tv = view.findViewById(R.id.tvDeviceName);
+        String deviceName = ((BluetoothManager) getActivity().getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter().getRemoteDevice(FotaApi.macAddress).getName();
+        if (deviceName == null){
+            deviceName = getString(R.string.unknown_device);
+        }
+        tv.setText(deviceName);
         setTextInformation(mCurrentText);
 
         // Attach onClickListeners
-        getView().findViewById(R.id.buttonPossible).setOnClickListener(this);
-        getView().findViewById(R.id.buttonUserConfirmation).setOnClickListener(this);
-        getView().findViewById(R.id.buttonFota).setOnClickListener(this);
-        getView().findViewById(R.id.buttonRefreshFwTable).setOnClickListener(this);
-        getView().findViewById(R.id.buttonRefreshDeviceInfo).setOnClickListener(this);
-        getView().findViewById(R.id.buttonEditFwServer).setOnClickListener(this);
-        getView().findViewById(R.id.buttonSelectFwServer).setOnClickListener(this);
+        getView().findViewById(R.id.btnChangeDevice).setOnClickListener(this);
+        getView().findViewById(R.id.btnUpdatePossible).setOnClickListener(this);
+        getView().findViewById(R.id.btnUpdateFirmware).setOnClickListener(this);
+        getView().findViewById(R.id.btnRefreshAvailableFirmware).setOnClickListener(this);
+        getView().findViewById(R.id.btnRefreshDeviceDetails).setOnClickListener(this);
+        getView().findViewById(R.id.btnChangeFirmwareServer).setOnClickListener(this);
+        getView().findViewById(R.id.btnSelectFirmwareServer).setOnClickListener(this);
 
-        mFirmwareTableLayout = getView().findViewById(R.id.tableAvailableFw);
+        mFirmwareTableLayout = getView().findViewById(R.id.tableAvailableFirmware);
         mDeviceDetailsTableLayout = getView().findViewById(R.id.tableDeviceDetails);
         mEditFwServerDialog = new EditFwServerDialogFragment();
         mSelectFwServerDialog = new SelectFwServerDialogFragment();
@@ -134,7 +140,7 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
 
     @Override
     public void onResume() {
-        TextView textView = getView().findViewById(R.id.textViewMacAddress);
+        TextView textView = getView().findViewById(R.id.tvDeviceAddress);
         textView.requestFocus();
         setTextInformation(mCurrentText);
         super.onResume();
@@ -155,35 +161,33 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            case R.id.buttonPossible:
+            case R.id.btnChangeDevice:
+                getFragmentManager().popBackStack();
+                break;
+            case R.id.btnUpdatePossible:
                 mFotaApi.isFirmwareUpdatePossible();
                 setTextInformation("Checking if firmware update is possible...");
                 break;
-            case R.id.buttonUserConfirmation:
-                //TODO: replace the line below with actual code for asking the user if they want to update
-                mUserWantsToUpdate = true;
-                setTextInformation("User has " + (mUserWantsToUpdate ? "" : "not ") + "confirmed that they want to update.");
-                break;
-            case R.id.buttonFota:
+            case R.id.btnUpdateFirmware:
                 setTextInformation("Firmware upgrade in progress...");
-                mFotaApi.doFirmwareUpdate(mUserWantsToUpdate);
+                mFotaApi.doFirmwareUpdate(true);
                 break;
-            case R.id.buttonRefreshFwTable:
+            case R.id.btnRefreshAvailableFirmware:
                 getAllFirmwares();
                 break;
-            case R.id.buttonRefreshDeviceInfo:
+            case R.id.btnRefreshDeviceDetails:
                 getDeviceDetails();
                 break;
-            case R.id.buttonEditFwServer:
+            case R.id.btnChangeFirmwareServer:
                 mEditFwServerDialog.show(getFragmentManager(),"EditFwServerDialog");
                 break;
-            case R.id.buttonSelectFwServer:
+            case R.id.btnSelectFirmwareServer:
                 mSelectFwServerDialog.show(getFragmentManager(),"SelectFwServerDialog");
                 break;
             default:
                 break;
         }
-        TextView textView = getView().findViewById(R.id.textViewMacAddress);
+        TextView textView = getView().findViewById(R.id.tvDeviceAddress);
         textView.requestFocus();
     }
 
@@ -193,7 +197,7 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
 
     private void setTextInformation(String s){
         mCurrentText = s;
-        ((TextView) mView.findViewById(R.id.text_info)).setText(s);
+        ((TextView) mView.findViewById(R.id.tvStatusBox)).setText(s);
     }
 
     private void getAllFirmwares() {

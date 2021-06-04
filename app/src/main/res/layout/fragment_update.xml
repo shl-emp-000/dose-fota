@@ -1,179 +1,210 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:clickable="true"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/textViewMacAddress"
+    <!-- Device -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutDevice"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:focusable="true"
-        android:focusableInTouchMode="true"/>
-
-    <Button
-        android:id="@+id/buttonPossible"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/textViewMacAddress"
-        android:text="Check if firmware update is possible" />
-
-    <Button
-        android:id="@+id/buttonUserConfirmation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/buttonPossible"
-        android:text="Confirm that user wants to update" />
-
-    <Button
-        android:id="@+id/buttonFota"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/buttonUserConfirmation"
-        android:text="Do firmware update" />
-
-    <ScrollView
-        android:id="@+id/scrollViewInfo"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/buttonFota">
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_margin="5dp">
 
         <TextView
-            android:id="@+id/text_info"
-            android:layout_width="wrap_content"
+            android:id="@+id/tvDeviceTitle"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@id/buttonFota"
-            android:layout_centerHorizontal="true"
-            android:layout_marginTop="15dp"
-            android:textColor="#0c377b"
-            android:textSize="30sp"
-            android:textStyle="bold" />
-    </ScrollView>
+            android:text="@string/textview_device"
+            android:textSize="28sp"
+            app:layout_constraintTop_toTopOf="parent"
+            android:textStyle="bold"/>
+
+        <Button
+            android:id="@+id/btnChangeDevice"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:drawableTop="@drawable/ic_baseline_list_24"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvDeviceName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@+id/tvDeviceTitle"
+            android:text="@string/unknown_device"
+            android:textSize="18sp"/>
+
+        <TextView
+            android:id="@+id/tvDeviceAddress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@+id/tvDeviceName"
+            android:text="@string/unknown_address"
+            android:textStyle="italic"
+            android:textSize="18sp"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- Firmware server -->
-    <TextView
-        android:id="@+id/textFirmwareServer"
-        android:layout_width="wrap_content"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutFirmwareServer"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/scrollViewInfo"
-        android:layout_alignParentStart="true"
-        android:layout_marginStart="12dp"
-        android:layout_marginTop="5dp"
-        android:text="Firmware Server"
-        android:textAppearance="@style/TextAppearance.AppCompat.Large" />
+        app:layout_constraintTop_toBottomOf="@+id/layoutDevice"
+        android:layout_margin="5dp">
 
-    <Button
-        android:id="@+id/buttonEditFwServer"
-        android:layout_width="wrap_content"
-        android:layout_height="35dp"
-        android:layout_below="@id/scrollViewInfo"
-        android:layout_marginStart="15dp"
-        android:layout_marginTop="5dp"
-        android:layout_toEndOf="@+id/textFirmwareServer"
-        android:text="Edit" />
+        <TextView
+            android:id="@+id/tvFirmwareServerTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/textview_firmware_server"
+            android:textSize="28sp"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:textStyle="bold"/>
 
-    <Button
-        android:id="@+id/buttonSelectFwServer"
-        android:layout_width="wrap_content"
-        android:layout_height="35dp"
-        android:layout_below="@id/scrollViewInfo"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="5dp"
-        android:layout_marginEnd="15dp"
-        android:text="Select" />
+        <Button
+            android:id="@+id/btnChangeFirmwareServer"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:layout_marginLeft="5dp"
+            android:drawableTop="@drawable/ic_baseline_drive_folder_upload_24"
+            app:layout_constraintStart_toEndOf="@+id/tvFirmwareServerTitle"
+            app:layout_constraintTop_toTopOf="parent" />
 
-    <TextView
-        android:id="@+id/textSelectedFirmwareServer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/textFirmwareServer"
-        android:layout_alignParentStart="true"
-        android:layout_marginStart="12dp"
-        android:layout_marginTop="5dp"
-        android:text="Default"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+        <Button
+            android:id="@+id/btnSelectFirmwareServer"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:drawableTop="@drawable/ic_baseline_list_24"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Available Firmware table -->
-    <Button
-        android:id="@+id/buttonRefreshFwTable"
-        android:layout_width="wrap_content"
-        android:layout_height="35dp"
-        android:layout_below="@id/textSelectedFirmwareServer"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="5dp"
-        android:layout_marginEnd="15dp"
-        android:text="Refresh" />
-
-    <TextView
-        android:id="@+id/textAvailableFirmware"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/textSelectedFirmwareServer"
-        android:layout_alignParentStart="true"
-        android:layout_marginStart="12dp"
-        android:layout_marginTop="5dp"
-        android:text="Available Firmware"
-        android:textAppearance="@style/TextAppearance.AppCompat.Large" />
-
-    <ScrollView
-        android:id="@+id/scrollViewFwTable"
-        android:layout_width="382dp"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/textAvailableFirmware"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginStart="15dp"
-        android:layout_marginTop="10dp"
-        android:layout_marginEnd="15dp">
-
-        <TableLayout
-            android:id="@+id/tableAvailableFw"
+        <TextView
+            android:id="@+id/tvFirmwareServer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:stretchColumns="*">
-        </TableLayout>
-    </ScrollView>
+            app:layout_constraintTop_toBottomOf="@id/btnChangeFirmwareServer"/>
 
-    <!-- Device Details table -->
-    <Button
-        android:id="@+id/buttonRefreshDeviceInfo"
-        android:layout_width="wrap_content"
-        android:layout_height="35dp"
-        android:layout_below="@id/scrollViewFwTable"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="5dp"
-        android:layout_marginEnd="15dp"
-        android:text="Refresh" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <TextView
-        android:id="@+id/textDeviceDetails"
-        android:layout_width="wrap_content"
+    <!-- Available firmware -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutAvailableFirmware"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/scrollViewFwTable"
-        android:layout_alignParentStart="true"
-        android:layout_marginStart="12dp"
-        android:layout_marginTop="5dp"
-        android:text="Device Details"
-        android:textAppearance="@style/TextAppearance.AppCompat.Large" />
+        app:layout_constraintTop_toBottomOf="@+id/layoutFirmwareServer"
+        android:layout_margin="5dp">
 
-    <ScrollView
-        android:id="@+id/scrollViewDeviceDetails"
-        android:layout_width="382dp"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/textDeviceDetails"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginStart="15dp"
-        android:layout_marginTop="10dp"
-        android:layout_marginEnd="15dp">
-
-        <TableLayout
-            android:id="@+id/tableDeviceDetails"
+        <TextView
+            android:id="@+id/tvAvailableFirmwareTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:stretchColumns="*">
-        </TableLayout>
-    </ScrollView>
+            android:text="@string/textview_available_firmware"
+            android:textSize="28sp"
+            app:layout_constraintTop_toTopOf="parent"
+            android:textStyle="bold"/>
 
-</RelativeLayout>
+        <Button
+            android:id="@+id/btnRefreshAvailableFirmware"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:drawableTop="@drawable/ic_baseline_refresh_24"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ScrollView
+            android:id="@+id/scrollViewFwTable"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@id/tvAvailableFirmwareTitle">
+
+            <TableLayout
+                android:id="@+id/tableAvailableFirmware"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stretchColumns="*"/>
+        </ScrollView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Device details -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutDeviceDetails"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/layoutAvailableFirmware"
+        android:layout_margin="5dp">
+
+        <TextView
+            android:id="@+id/tvDeviceDetailsTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/textview_device_details"
+            android:textSize="28sp"
+            app:layout_constraintTop_toTopOf="parent"
+            android:textStyle="bold"/>
+
+        <Button
+            android:id="@+id/btnRefreshDeviceDetails"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:drawableTop="@drawable/ic_baseline_refresh_24"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ScrollView
+            android:id="@+id/scrollViewDeviceDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@+id/tvDeviceDetailsTitle">
+
+            <TableLayout
+                android:id="@+id/tableDeviceDetails"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stretchColumns="*"/>
+        </ScrollView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Update progress -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutUpdateProgress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/layoutDeviceDetails"
+        android:layout_margin="5dp">
+
+        <Button
+            android:id="@+id/btnUpdatePossible"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toTopOf="parent"
+            android:text="@string/button_update_possible"/>
+
+        <Button
+            android:id="@+id/btnUpdateFirmware"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@+id/btnUpdatePossible"
+            android:text="@string/button_update_firmware"/>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@+id/btnUpdateFirmware">
+            <TextView
+                android:id="@+id/tvStatusBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:layout_constraintTop_toBottomOf="parent"/>
+        </ScrollView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
