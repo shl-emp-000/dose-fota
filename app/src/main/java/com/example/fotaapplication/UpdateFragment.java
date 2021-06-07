@@ -54,35 +54,35 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
             synchronized (this) {
                 final String action = intent.getAction();
                 if (action.equals(ACTION_FOTA_BLE_CONNECTION_FAILED)){
-                    setTextInformation("Bluetooth error: was not able to connect or find the needed services.");
+                    setTextInformation(getString(R.string.fota_ble_connection_failed));
                 } else if (action.equals(ACTION_FOTA_COULD_NOT_BE_STARTED)){
-                    setTextInformation("Firmware update could not be started: isFirmwareUpdatePossible() has not returned ACTION_FOTA_POSSIBLE, user did not approve update or device isn't paired and connected.");
+                    setTextInformation(getString(R.string.fota_could_not_start));
                 } else if (action.equals(ACTION_FOTA_FAIL)){
-                    setTextInformation("Firmware update failed.");
+                    setTextInformation(getString(R.string.fota_failed));
                 } else if (action.equals(ACTION_FOTA_FILE_DOWNLOAD_FAILED)){
-                    setTextInformation("Downloading the firmware file failed.");
+                    setTextInformation(getString(R.string.fota_file_download_failed));
                 } else if (action.equals(ACTION_FOTA_NOT_POSSIBLE_DEVICE_BATTERY_NOT_READ)){
-                    setTextInformation("The battery level of the device could not be read.");
+                    setTextInformation(getString(R.string.fota_not_possible_device_battery_not_read));
                 } else if (action.equals(ACTION_FOTA_NOT_POSSIBLE_DEVICE_INFO_NOT_READ)){
-                    setTextInformation("The device information could not be read.");
+                    setTextInformation(getString(R.string.fota_not_possible_device_info_not_read));
                 } else if (action.equals(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_DEVICE)){
-                    setTextInformation("The device battery is too low.");
+                    setTextInformation(getString(R.string.fota_not_possible_device_battery_low));
                 } else if (action.equals(ACTION_FOTA_NOT_POSSIBLE_LOW_BATTERY_PHONE)){
-                    setTextInformation("The phone battery is too low.");
+                    setTextInformation(getString(R.string.fota_not_possible_phone_battery_low));
                 } else if (action.equals(ACTION_FOTA_NOT_POSSIBLE_NO_UPDATE_EXISTS)){
-                    setTextInformation("The device has the latest firmware installed already.");
+                    setTextInformation(getString(R.string.fota_not_possible_already_updated));
                 } else if (action.equals(ACTION_FOTA_NOT_POSSIBLE_NO_WIFI_CONNECTION)){
-                    setTextInformation("No wifi connection.");
+                    setTextInformation(getString(R.string.fota_not_possible_no_wifi));
                 } else if (action.equals(ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED)){
-                    setTextInformation("Required permissions are not granted.");
+                    setTextInformation(getString(R.string.fota_not_possible_permissions_not_granted));
                 } else if (action.equals(ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED)){
-                    setTextInformation("The version check failed.");
+                    setTextInformation(getString(R.string.fota_not_possible_version_check_failed));
                 } else if (action.equals(ACTION_FOTA_POSSIBLE)){
-                    setTextInformation("Firmware update is possible.");
+                    setTextInformation(getString(R.string.fota_possible));
                 } else if (action.equals(ACTION_FOTA_SUCCESS)){
-                    setTextInformation("Firmware update is finished.");
+                    setTextInformation(getString(R.string.fota_finished));
                 } else if (action.equals(ACTION_FOTA_TIMEOUT)){
-                    setTextInformation("Timeout.");
+                    setTextInformation(getString(R.string.fota_timeout));
                 }
             }
         }
@@ -166,10 +166,10 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
                 break;
             case R.id.btnUpdatePossible:
                 mFotaApi.isFirmwareUpdatePossible();
-                setTextInformation("Checking if firmware update is possible...");
+                setTextInformation(getString(R.string.fota_checking_update_possible));
                 break;
             case R.id.btnUpdateFirmware:
-                setTextInformation("Firmware upgrade in progress...");
+                setTextInformation(getString(R.string.fota_in_progress));
                 mFotaApi.doFirmwareUpdate(true);
                 break;
             case R.id.btnRefreshAvailableFirmware:
@@ -179,10 +179,10 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
                 getDeviceDetails();
                 break;
             case R.id.btnChangeFirmwareServer:
-                mEditFwServerDialog.show(getFragmentManager(),"EditFwServerDialog");
+                mEditFwServerDialog.show(getFragmentManager(),getString(R.string.edit_fw_server_fragment_tag));
                 break;
             case R.id.btnSelectFirmwareServer:
-                mSelectFwServerDialog.show(getFragmentManager(),"SelectFwServerDialog");
+                mSelectFwServerDialog.show(getFragmentManager(),getString(R.string.select_fw_server_fragment_tag));
                 break;
             default:
                 break;

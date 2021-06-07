@@ -70,7 +70,7 @@ public class SelectFwServerDialogFragment extends DialogFragment {
         mSelectedItem = -1;
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         // Set the dialog title
-        builder.setTitle("Select a server")
+        builder.setTitle(getString(R.string.fw_server_select))
                 // Specify the list array, the items to be selected by default (null for none),
                 // and the listener through which to receive callbacks when items are selected
                 .setSingleChoiceItems(charSeqList, -1, new DialogInterface.OnClickListener() {
@@ -80,7 +80,7 @@ public class SelectFwServerDialogFragment extends DialogFragment {
                             }
                         })
                 // Set the action buttons
-                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                .setPositiveButton(getString(R.string.ok), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int id) {
                         // User clicked OK, so save the selectedItems results somewhere
@@ -88,7 +88,7 @@ public class SelectFwServerDialogFragment extends DialogFragment {
                         listener.onDialogPositiveClick(SelectFwServerDialogFragment.this);
                     }
                 })
-                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                .setNegativeButton(getString(R.string.cancel), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int id) {
                         mSelectedItem = -1;

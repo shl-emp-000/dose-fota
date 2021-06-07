@@ -52,25 +52,25 @@ public class EditFwServerDialogFragment extends DialogFragment {
             @Override
             public void onClick(View view) {
                 Intent chooseFile = new Intent(Intent.ACTION_GET_CONTENT);
-                chooseFile.setType("text/*");
-                chooseFile = Intent.createChooser(chooseFile, "Choose a file");
+                chooseFile.setType(getString(R.string.fw_server_file_types));
+                chooseFile = Intent.createChooser(chooseFile, getString(R.string.fw_server_choose_file));
                 startActivityForResult(chooseFile, PICKFILE_RESULT_CODE);
             }
         });
-        builder.setTitle("Upload new server list:")
+        builder.setTitle(getString(R.string.fw_server_upload_title))
                 .setView(v)
-                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                .setPositiveButton(getString(R.string.ok), new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         ArrayList<FirmwareServer> serverArray;
                         Toast toast;
 
                         if (null == fileUri) {
-                            toast = Toast.makeText(getActivity(), "No file selected, no changes done!", Toast.LENGTH_SHORT);
+                            toast = Toast.makeText(getActivity(), getString(R.string.fw_server_no_file_selected), Toast.LENGTH_SHORT);
                         } else {
                             serverArray = getFirmwareServerList();
 
                             if (serverArray.isEmpty()) {
-                                toast = Toast.makeText(getActivity(), "Unable to parse the selected file!", Toast.LENGTH_SHORT);
+                                toast = Toast.makeText(getActivity(), getString(R.string.fw_server_unable_to_parse), Toast.LENGTH_SHORT);
                             } else {
                                 // Save the server list to preference
                                 SharedPreferences prefs = getContext().getSharedPreferences(getString(R.string.preferences_file_fw_servers), Context.MODE_PRIVATE);
@@ -81,16 +81,16 @@ public class EditFwServerDialogFragment extends DialogFragment {
                                     e.printStackTrace();
                                 }
                                 editor.commit();
-                                toast = Toast.makeText(getActivity(), "Successfully updated the server list!", Toast.LENGTH_SHORT);
+                                toast = Toast.makeText(getActivity(), getString(R.string.fw_server_updated_list), Toast.LENGTH_SHORT);
                             }
                         }
                         toast.show();
                     }
                 })
-                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                .setNegativeButton(getString(R.string.cancel), new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         // User cancelled the dialog
-                        Toast toast = Toast.makeText(getActivity(), "Discarded changes to the server list!", Toast.LENGTH_SHORT);
+                        Toast toast = Toast.makeText(getActivity(), getString(R.string.fw_server_discard_changes), Toast.LENGTH_SHORT);
                         toast.show();
                     }
                 });
@@ -126,7 +126,7 @@ public class EditFwServerDialogFragment extends DialogFragment {
             cursor.moveToFirst();
             filePath = cursor.getString(column_index);
         } catch (Exception e) {
-            Log.d("EditFwServerDialog", "getRealPathFromUri Exception : " + e.toString());
+            Log.d(getString(R.string.edit_fw_server_fragment_tag), getString(R.string.fw_server_get_real_path_from_uri_exception) + e.toString());
             return "";
         } finally {
             if (cursor != null) {
@@ -143,7 +143,7 @@ public class EditFwServerDialogFragment extends DialogFragment {
                 cursor.moveToFirst();
                 filePath = cursor.getString(column_index);
             } catch (Exception e) {
-                Log.d("EditFwServerDialog", "getRealPathFromUri Exception : " + e.toString());
+                Log.d(getString(R.string.edit_fw_server_fragment_tag), getString(R.string.fw_server_get_real_path_from_uri_exception) + e.toString());
                 return "";
             } finally {
                 if (cursor != null) {
@@ -172,7 +172,7 @@ public class EditFwServerDialogFragment extends DialogFragment {
             reader.close();
         } catch(IOException ioe){
             // Unable to parse file
-            Log.d("FwServerDialog", "Unable to parse server file: " + ioe.toString());
+            Log.d(getString(R.string.fw_server_fragment_tag), getString(R.string.fw_server_unable_parse_file) + ioe.toString());
         }
 
         return serverArray;

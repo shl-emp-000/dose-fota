@@ -111,7 +111,7 @@ public class MainActivity extends AppCompatActivity implements  SelectFwServerDi
         Toast toast;
 
         if (null == fragment) {
-            toast = Toast.makeText(this, "Something went wrong, server not changed!", Toast.LENGTH_SHORT);
+            toast = Toast.makeText(this, getString(R.string.fw_server_error_server_not_changed), Toast.LENGTH_SHORT);
             toast.show();
             return;
         }
@@ -119,8 +119,8 @@ public class MainActivity extends AppCompatActivity implements  SelectFwServerDi
         if (d.getSelectedItem() < 0) {
             // No item was selected, go with hardcoded server
             fragment.setFirmwareServer("","");
-            ((TextView) this.findViewById(R.id.tvFirmwareServer)).setText("Default");
-            toast = Toast.makeText(this, "No server selected, using the default!", Toast.LENGTH_SHORT);
+            ((TextView) this.findViewById(R.id.tvFirmwareServer)).setText(getString(R.string.default_string));
+            toast = Toast.makeText(this, getString(R.string.fw_server_not_selected_using_default), Toast.LENGTH_SHORT);
             toast.show();
         } else {
             // Load servers from preference
@@ -139,10 +139,10 @@ public class MainActivity extends AppCompatActivity implements  SelectFwServerDi
             if (Patterns.WEB_URL.matcher(urlAddress).matches()) {
                 fragment.setFirmwareServer(urlAddress, serverArray.get(d.getSelectedItem()).getServerSigningKey());
                 ((TextView) this.findViewById(R.id.tvFirmwareServer)).setText(serverArray.get(d.getSelectedItem()).getServerAddress());
-                toast = Toast.makeText(this, "Successfully changed server!", Toast.LENGTH_SHORT);
+                toast = Toast.makeText(this, getString(R.string.fw_server_changed), Toast.LENGTH_SHORT);
                 toast.show();
             } else {
-                toast = Toast.makeText(this, "Discarded server change, Invalid URL!", Toast.LENGTH_SHORT);
+                toast = Toast.makeText(this, getString(R.string.fw_server_invalid_url), Toast.LENGTH_SHORT);
                 toast.show();
             }
         }
@@ -151,7 +151,7 @@ public class MainActivity extends AppCompatActivity implements  SelectFwServerDi
     @Override
     public void onDialogNegativeClick(DialogFragment dialog) {
         // User touched the dialog's negative button
-        Toast toast = Toast.makeText(this, "Discarded server change!", Toast.LENGTH_SHORT);
+        Toast toast = Toast.makeText(this, getString(R.string.fw_server_discard_server_change), Toast.LENGTH_SHORT);
         toast.show();
     }
 

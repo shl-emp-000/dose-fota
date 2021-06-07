@@ -1,9 +1,19 @@
 <resources>
     <string name="app_name">Dose Firmware Update</string>
+
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="default_string">Default</string>
+
     <string name="unknown_device">Unknown device</string>
     <string name="unknown_address">00:00:00:00:00:00</string>
+
+    <!-- fragment tags -->
     <string name="scanner_fragment_tag">Scanner fragment tag</string>
     <string name="update_fragment_tag">Update fragment tag</string>
+    <string name="edit_fw_server_fragment_tag">EditFwServerDialog tag</string>
+    <string name="select_fw_server_fragment_tag">SelectFwServerDialog tag</string>
+    <string name="fw_server_fragment_tag">FwServerDialog tag</string>
 
     <string name="textview_device">Device</string>
     <string name="textview_firmware_server">Firmware server</string>
@@ -16,4 +26,48 @@
 
     <string name="preferences_file_fw_servers">firmwareServerFile</string>
     <string name="preferences_fw_servers_key">servers</string>
+
+    <!-- FOTA messages -->
+    <string name="fota_not_possible_device_battery_low">The device battery is too low.</string>
+    <string name="fota_not_possible_device_battery_not_read">The battery level of the device could not be read.</string>
+    <string name="fota_not_possible_device_info_not_read">The device information could not be read.</string>
+    <string name="fota_not_possible_phone_battery_low">The phone battery is too low.</string>
+    <string name="fota_not_possible_already_updated">The device has the latest firmware installed already.</string>
+    <string name="fota_not_possible_no_wifi">No wifi connection.</string>
+    <string name="fota_not_possible_permissions_not_granted">Required permissions are not granted.</string>
+    <string name="fota_not_possible_version_check_failed">The version check failed.</string>
+
+    <string name="fota_possible">Firmware update is possible.</string>
+    <string name="fota_finished">Firmware update is finished.</string>
+    <string name="fota_failed">Firmware update failed.</string>
+    <string name="fota_file_download_failed">Downloading the firmware file failed.</string>
+    <string name="fota_timeout">Timeout</string>
+    <string name="fota_could_not_start">Firmware update could not be started. Reasons: FOTA is not possible or device is not paired.</string>
+    <string name="fota_ble_connection_failed">BLE connection to device failed, most likely you are not paired with the device.</string>
+
+    <string name="fota_checking_update_possible">Checking if firmware update is possible…</string>
+    <string name="fota_in_progress">Firmware upgrade in progress…</string>
+
+    <!-- DeviceAdapter -->
+    <string name="rssi_unit">dBm</string>
+
+    <!-- Firmware server -->
+    <string name="fw_server_file_types">text/*</string>
+    <string name="fw_server_choose_file">Choose a file</string>
+    <string name="fw_server_upload_title">Upload new server list:</string>
+    <string name="fw_server_no_file_selected">No file selected, no changes done!</string>
+    <string name="fw_server_unable_to_parse">Unable to parse the selected file!</string>
+    <string name="fw_server_updated_list">Successfully updated the server list!</string>
+    <string name="fw_server_discard_changes">Discarded changes to the server list!</string>
+    <string name="fw_server_error_server_not_changed">Something went wrong, server not changed!</string>
+    <string name="fw_server_not_selected_using_default">No server selected, using the default!</string>
+    <string name="fw_server_changed">Successfully changed server!</string>
+    <string name="fw_server_invalid_url">Discarded server change, invalid URL!</string>
+    <string name="fw_server_discard_server_change">Discarded server change!</string>
+    <string name="fw_server_select">Select a server</string>
+
+    <!-- Log messages -->
+    <string name="fw_server_unable_parse_file">Unable to parse server file: </string>
+    <string name="fw_server_get_real_path_from_uri_exception">getRealPathFromUri Exception: </string>
+
 </resources>

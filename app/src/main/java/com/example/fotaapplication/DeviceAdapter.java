@@ -76,7 +76,7 @@ public class DeviceAdapter extends BaseAdapter implements Filterable {
         deviceAddress.setText(address);
 
         TextView deviceRssid = view.findViewById(R.id.tvDeviceRssi);
-        String rssiString = mRssiValues.get(address) + "dBm";
+        String rssiString = mRssiValues.get(address) + mActivity.getString(R.string.rssi_unit);
         if (mRssiValues.get(address) > 0) {
             rssiString = "";
         }
