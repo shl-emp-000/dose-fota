@@ -52,7 +52,9 @@ import java.util.List;
 import java.util.Map;
 
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_FAIL;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_PROGRESS_UPDATE;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_SUCCESS;
+import static com.innovationzed.fotalibrary.CommonUtils.Utils.OTA_PROGRESS;
 
 public class OTAFUHandler_v1 extends OTAFUHandlerBase {
 
@@ -320,6 +322,7 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
         List<OTAFlashRowModel_v1> dataRows = mFileContents.get(CustomFileReader_v1.KEY_DATA);
         //Update progress bar
         int totalLines = dataRows.size();
+        updateProgressBar(rowNum, totalLines);
         if (rowNum < totalLines) {//Process next row
             Utils.setIntSharedPreference(getContext(), Constants.PREF_PROGRAM_ROW_NO, rowNum);
             Utils.setIntSharedPreference(getContext(), Constants.PREF_PROGRAM_ROW_START_POS, 0);
@@ -398,5 +401,14 @@ public class OTAFUHandler_v1 extends OTAFUHandlerBase {
         mOtaFirmwareWrite.OTASetEivCmd(mCheckSumType, eivRow.mEiv);
         Utils.setStringSharedPreference(getContext(), Constants.PREF_BOOTLOADER_STATE, "" + BootLoaderCommands_v1.SET_EIV);
         Utils.setIntSharedPreference(getContext(), Constants.PREF_PROGRAM_ROW_START_POS, 0);
+    }
+
+    private void updateProgressBar(int progress, int maxProgress) {
+        String progressAndMax = progress + "," + maxProgress;
+        Intent progressUpdateIntent = new Intent(ACTION_FOTA_PROGRESS_UPDATE);
+        Bundle bundle = new Bundle();
+        bundle.putString(OTA_PROGRESS, progressAndMax);
+        progressUpdateIntent.putExtras(bundle);
+        BluetoothLeService.sendLocalBroadcastIntent(getContext(), progressUpdateIntent);
     }
 }

@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.TableLayout;
 import android.widget.TextView;
 
@@ -33,8 +34,10 @@ import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NO
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_POSSIBLE;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_PROGRESS_UPDATE;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_SUCCESS;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_TIMEOUT;
+import static com.innovationzed.fotalibrary.CommonUtils.Utils.OTA_PROGRESS;
 
 
 public class UpdateFragment extends Fragment implements View.OnClickListener {
@@ -45,6 +48,8 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
     private TableLayout mDeviceDetailsTableLayout;
     private EditFwServerDialogFragment mEditFwServerDialog;
     private SelectFwServerDialogFragment mSelectFwServerDialog;
+    private ProgressBar mFotaProgressBar;
+    private TextView mFotaProgressPercent;
     private View mView;
 
     // Receiver for the possible actions that can be broadcasted from the FotaApi
@@ -83,6 +88,18 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
                     setTextInformation(getString(R.string.fota_finished));
                 } else if (action.equals(ACTION_FOTA_TIMEOUT)){
                     setTextInformation(getString(R.string.fota_timeout));
+                } else if (action.equals(ACTION_FOTA_PROGRESS_UPDATE)) {
+                    Bundle bundle = intent.getExtras();
+                    if (bundle.containsKey(OTA_PROGRESS)) {
+                        String progressAndMax = bundle.getString(OTA_PROGRESS);
+                        String[] splitProgress = progressAndMax.split("[,]");
+                        int progress = Integer.parseInt(splitProgress[0]);
+                        int maxProgress = Integer.parseInt(splitProgress[1]);
+                        mFotaProgressBar.setProgress(progress);
+                        mFotaProgressBar.setMax(maxProgress);
+                        String progressText = "" + (int) (((float)progress / (float)maxProgress) * 100) + "%";
+                        mFotaProgressPercent.setText(progressText);
+                    }
                 }
             }
         }
@@ -132,6 +149,8 @@ public class UpdateFragment extends Fragment implements View.OnClickListener {
 
         mFirmwareTableLayout = getView().findViewById(R.id.tableAvailableFirmware);
         mDeviceDetailsTableLayout = getView().findViewById(R.id.tableDeviceDetails);
+        mFotaProgressBar = mView.findViewById(R.id.progressBar);
+        mFotaProgressPercent = mView.findViewById(R.id.tvProgressBar);
         mEditFwServerDialog = new EditFwServerDialogFragment();
         mSelectFwServerDialog = new SelectFwServerDialogFragment();
 

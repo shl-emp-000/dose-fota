@@ -73,6 +73,7 @@ import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NO
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_PERMISSIONS_NOT_GRANTED;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_NOT_POSSIBLE_VERSION_CHECK_FAILED;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_POSSIBLE;
+import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_PROGRESS_UPDATE;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_SUCCESS;
 import static com.innovationzed.fotalibrary.CommonUtils.Constants.ACTION_FOTA_TIMEOUT;
 import static com.innovationzed.fotalibrary.FotaApi.downloadedFirmwareDir;
@@ -84,6 +85,7 @@ public class Utils {
 
     public static final String OTA_REASON = "OTA_REASON";
     public static final String IS_IN_BOOT_MODE = "IS_IN_BOOT_MODE";
+    public static final String OTA_PROGRESS = "OTA_PROGRESS";
 
     public static final String REGEX_MATCHES_CYACD2 = "(?i).*\\.cyacd2$";
     public static final String REGEX_ENDS_WITH_CYACD_OR_CYACD2 = "(?i)\\.cyacd2?$";
@@ -326,6 +328,7 @@ public class Utils {
         filter.addAction(ACTION_FOTA_POSSIBLE);
         filter.addAction(ACTION_FOTA_SUCCESS);
         filter.addAction(ACTION_FOTA_TIMEOUT);
+        filter.addAction(ACTION_FOTA_PROGRESS_UPDATE);
         return filter;
     }
 

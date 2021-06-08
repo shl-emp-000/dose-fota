@@ -46,10 +46,12 @@ public class MainActivity extends AppCompatActivity implements  SelectFwServerDi
         ActionBar actionBar = getSupportActionBar();
         actionBar.setTitle(getString(R.string.app_name) + " (v" + version + ")");
 
-        if (currentFragment == UPDATE_FRAGMENT) {
-            CommonUtils.replaceFragment(this, new UpdateFragment(), getString(R.string.update_fragment_tag), true);
-        } else {
-            CommonUtils.replaceFragment(this, new ScannerFragment(), getString(R.string.scanner_fragment_tag));
+        if (null == savedInstanceState) {
+            if (currentFragment == UPDATE_FRAGMENT) {
+                CommonUtils.replaceFragment(this, new UpdateFragment(), getString(R.string.update_fragment_tag), true);
+            } else {
+                CommonUtils.replaceFragment(this, new ScannerFragment(), getString(R.string.scanner_fragment_tag));
+            }
         }
     }
 

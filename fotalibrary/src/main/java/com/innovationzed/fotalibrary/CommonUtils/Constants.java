@@ -76,6 +76,8 @@ public class Constants {
             "com.innovationzed.fotalibrary.ACTION_FOTA_SUCCESS";
     public final static String ACTION_FOTA_TIMEOUT =
             "com.innovationzed.fotalibrary.ACTION_FOTA_TIMEOUT";
+    public final static String ACTION_FOTA_PROGRESS_UPDATE =
+            "com.innovationzed.fotalibrary.ACTION_FOTA_PROGRESS_UPDATE";
 
     /**
      * Actions that is only used internally in FotaApi
